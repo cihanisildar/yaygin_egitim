@@ -1,40 +1,32 @@
 'use server';
 
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
+import { prisma } from '@/lib/prisma';
+import { UserRole, Prisma } from '@prisma/client';
 
 /**
  * Gets all students assigned to a tutor
  */
 export async function getTutorStudents(tutorId: string) {
   try {
-    await connectToDatabase();
+    const students = await prisma.user.findMany({
+      where: {
+        role: UserRole.STUDENT,
+        tutorId: tutorId
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        points: true
+      }
+    });
     
-    const students = await User.find({
-      role: UserRole.STUDENT,
-      tutorId: tutorId
-    })
-    .select('username firstName lastName points');
-    
-    return students.map(student => ({
-      id: student._id,
-      username: student.username,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      points: student.points
-    }));
+    return students;
   } catch (error) {
     console.error('Get tutor students error:', error);
     throw new Error('Failed to fetch tutor students');
   }
-}
-
-interface StudentQuery {
-  role: UserRole;
-  $or?: Array<{
-    [key: string]: { $regex: string, $options: string }
-  }>;
-  tutorId?: string;
 }
 
 /**
@@ -54,42 +46,52 @@ export async function getStudents(options: {
       tutorId
     } = options;
     
-    await connectToDatabase();
-    
-    const query: StudentQuery = { role: UserRole.STUDENT };
+    // Build where clause
+    const where: Prisma.UserWhereInput = {
+      role: UserRole.STUDENT
+    };
     
     // Add search filter if provided
     if (search) {
-      query.$or = [
-        { username: { $regex: search, $options: 'i' } },
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } }
+      where.OR = [
+        { username: { contains: search, mode: 'insensitive' } },
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } }
       ];
     }
     
     // Add tutorId filter if provided
     if (tutorId) {
-      query.tutorId = tutorId;
+      where.tutorId = tutorId;
     }
     
-    const total = await User.countDocuments(query);
-    
-    const students = await User.find(query)
-      .select('username firstName lastName points tutorId')
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ points: -1 })
-      .populate('tutorId', 'username firstName lastName');
+    const [students, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        select: {
+          id: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          points: true,
+          tutor: {
+            select: {
+              id: true,
+              username: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        },
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { points: 'desc' }
+      }),
+      prisma.user.count({ where })
+    ]);
     
     return {
-      students: students.map(student => ({
-        id: student._id,
-        username: student.username,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        points: student.points,
-        tutor: student.tutorId
-      })),
+      students,
       total,
       page,
       limit,

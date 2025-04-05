@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import Event from '@/models/Event';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,8 +13,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
     const data = await request.json();
     
     // Validate required fields
@@ -27,38 +24,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new event
-    const newEvent = new Event({
-      title: data.title,
-      description: data.description,
-      startDateTime: new Date(data.startDateTime),
-      endDateTime: new Date(data.endDateTime),
-      location: data.location || 'Online',
-      type: data.type || 'in-person',
-      capacity: data.capacity || 20,
-      points: data.points || 0,
-      tags: data.tags || [],
-      createdBy: currentUser.id,
-      status: 'upcoming'
+    const newEvent = await prisma.event.create({
+      data: {
+        title: data.title,
+        description: data.description,
+        startDate: new Date(data.startDateTime),
+        endDate: new Date(data.endDateTime),
+        location: data.location || 'Online',
+        type: data.type || 'in-person',
+        capacity: data.capacity || 20,
+        points: data.points || 0,
+        tags: data.tags || [],
+        status: 'upcoming',
+        createdById: currentUser.id
+      }
     });
-
-    await newEvent.save();
 
     return NextResponse.json({ 
       message: 'Event created successfully',
-      event: {
-        id: newEvent._id,
-        title: newEvent.title,
-        description: newEvent.description,
-        startDateTime: newEvent.startDateTime,
-        endDateTime: newEvent.endDateTime,
-        location: newEvent.location,
-        type: newEvent.type,
-        capacity: newEvent.capacity,
-        points: newEvent.points,
-        tags: newEvent.tags,
-        createdBy: newEvent.createdBy,
-        status: newEvent.status
-      }
+      event: newEvent
     }, { status: 201 });
   } catch (error: unknown) {
     console.error('Error creating event:', error);
@@ -81,11 +65,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
     // Get all events created by this tutor
-    const events = await Event.find({ createdBy: currentUser.id })
-      .sort({ startDateTime: -1 });
+    const events = await prisma.event.findMany({
+      where: { 
+        createdById: currentUser.id 
+      },
+      orderBy: {
+        startDate: 'desc'
+      }
+    });
 
     return NextResponse.json({ events }, { status: 200 });
   } catch (error: unknown) {

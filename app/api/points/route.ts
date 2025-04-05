@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
-import PointsTransaction, { TransactionType } from '@/models/PointsTransaction';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
-import mongoose from 'mongoose';
+import { TransactionType, UserRole } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,81 +31,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
-    // Start transaction
-    const session = await mongoose.startSession();
-    session.startTransaction();
-
-    try {
+    // Use Prisma transaction
+    const result = await prisma.$transaction(async (tx) => {
       // Check if student exists and is actually a student
-      const student = await User.findOne({ 
-        _id: studentId, 
-        role: UserRole.STUDENT 
-      }).session(session);
+      const student = await tx.user.findFirst({
+        where: {
+          id: studentId,
+          role: UserRole.STUDENT
+        }
+      });
 
       if (!student) {
-        await session.abortTransaction();
-        session.endSession();
-        
-        return NextResponse.json(
-          { error: 'Student not found' },
-          { status: 404 }
-        );
+        throw new Error('Student not found');
       }
 
       // If tutor, check if the student is assigned to this tutor
-      if (isTutor(currentUser) && student.tutorId.toString() !== currentUser.id) {
-        await session.abortTransaction();
-        session.endSession();
-        
-        return NextResponse.json(
-          { error: 'Unauthorized: Student not assigned to this tutor' },
-          { status: 403 }
-        );
+      if (isTutor(currentUser) && student.tutorId !== currentUser.id) {
+        throw new Error('Unauthorized: Student not assigned to this tutor');
       }
 
       // Create transaction record
-      const transaction = new PointsTransaction({
-        studentId,
-        tutorId: currentUser.id,
-        points,
-        type: TransactionType.AWARD,
-        reason: reason || 'Points awarded',
+      const transaction = await tx.pointsTransaction.create({
+        data: {
+          studentId,
+          tutorId: currentUser.id,
+          points,
+          type: TransactionType.REWARD,
+          reason: reason || 'Points awarded'
+        }
       });
 
-      await transaction.save({ session });
-
       // Update student's points
-      student.points += points;
-      await student.save({ session });
+      const updatedStudent = await tx.user.update({
+        where: { id: studentId },
+        data: {
+          points: {
+            increment: points
+          }
+        }
+      });
 
-      await session.commitTransaction();
-      session.endSession();
+      return { transaction, newBalance: updatedStudent.points };
+    });
 
-      return NextResponse.json(
-        {
-          message: 'Points awarded successfully',
-          transaction: {
-            id: transaction._id,
-            studentId: transaction.studentId,
-            tutorId: transaction.tutorId,
-            points: transaction.points,
-            type: transaction.type,
-            reason: transaction.reason,
-            createdAt: transaction.createdAt,
-          },
-          newBalance: student.points,
-        },
-        { status: 200 }
-      );
-    } catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
+    return NextResponse.json(
+      {
+        message: 'Points awarded successfully',
+        transaction: result.transaction,
+        newBalance: result.newBalance
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Award points error:', error);
+    if (error instanceof Error && error.message.includes('Student not found')) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json({ error: error.message }, { status: 403 });
+    }
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -130,23 +112,28 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const studentId = searchParams.get('studentId');
     
-    await connectToDatabase();
-    
-    const query: { studentId?: string | { $in: mongoose.Types.ObjectId[] } } = {};
+    const where: {
+      studentId?: string;
+      student?: {
+        tutorId: string;
+      };
+    } = {};
 
     // If admin, can see all transactions (optionally filtered by student)
     if (isAdmin(currentUser)) {
       if (studentId) {
-        query.studentId = studentId;
+        where.studentId = studentId;
       }
     } 
     // If tutor, can only see transactions for their students
     else if (isTutor(currentUser)) {
       if (studentId) {
         // Check if student belongs to this tutor
-        const student = await User.findOne({
-          _id: studentId,
-          tutorId: currentUser.id
+        const student = await prisma.user.findFirst({
+          where: {
+            id: studentId,
+            tutorId: currentUser.id
+          }
         });
         
         if (!student) {
@@ -156,37 +143,45 @@ export async function GET(request: NextRequest) {
           );
         }
         
-        query.studentId = studentId;
+        where.studentId = studentId;
       } else {
         // Get all transactions for tutor's students
-        const students = await User.find({ tutorId: currentUser.id }).select('_id');
-        query.studentId = { $in: students.map(s => s._id) };
+        where.student = {
+          tutorId: currentUser.id
+        };
       }
     }
     // If student, can only see their own transactions
     else {
-      query.studentId = currentUser.id;
+      where.studentId = currentUser.id;
     }
 
-    const transactions = await PointsTransaction.find(query)
-      .sort({ createdAt: -1 })
-      .populate('studentId', 'username firstName lastName')
-      .populate('tutorId', 'username firstName lastName');
-
-    return NextResponse.json(
-      { 
-        transactions: transactions.map(t => ({
-          id: t._id,
-          student: t.studentId,
-          tutor: t.tutorId,
-          points: t.points,
-          type: t.type,
-          reason: t.reason,
-          createdAt: t.createdAt,
-        })) 
+    const transactions = await prisma.pointsTransaction.findMany({
+      where,
+      orderBy: {
+        createdAt: 'desc'
       },
-      { status: 200 }
-    );
+      include: {
+        student: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json({ transactions }, { status: 200 });
   } catch (error) {
     console.error('Get transactions error:', error);
     return NextResponse.json(

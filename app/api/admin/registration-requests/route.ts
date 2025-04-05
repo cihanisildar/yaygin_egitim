@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import RegistrationRequest, { RequestStatus } from '@/models/RegistrationRequest';
-import User from '@/models/User';
+import { prisma } from '@/lib/prisma';
+import { RequestStatus } from '@prisma/client';
 import { checkIsAdmin } from '@/lib/server-auth';
 
 // GET - Fetch all registration requests
@@ -13,10 +12,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    await connectToDatabase();
-    
     // Fetch all registration requests
-    const requests = await RegistrationRequest.find({}).sort({ createdAt: -1 });
+    const requests = await prisma.registrationRequest.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
     
     return NextResponse.json({ requests }, { status: 200 });
   } catch (error) {
@@ -45,54 +46,72 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Rejection reason is required' }, { status: 400 });
     }
     
-    await connectToDatabase();
-    
-    // Find the registration request
-    const registrationRequest = await RegistrationRequest.findById(requestId);
-    
-    if (!registrationRequest) {
-      return NextResponse.json({ error: 'Registration request not found' }, { status: 404 });
-    }
-    
-    // Handle based on action
-    if (action === 'approve') {
-      // Create a new user from the registration request
-      const newUser = new User({
-        username: registrationRequest.username,
-        email: registrationRequest.email,
-        password: registrationRequest.password, // Password is already hashed
-        firstName: registrationRequest.firstName,
-        lastName: registrationRequest.lastName,
-        role: registrationRequest.requestedRole,
+    // Use Prisma transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Find the registration request
+      const registrationRequest = await tx.registrationRequest.findUnique({
+        where: { id: requestId }
       });
       
-      await newUser.save();
+      if (!registrationRequest) {
+        throw new Error('Registration request not found');
+      }
       
-      // Update the registration request status
-      registrationRequest.status = RequestStatus.APPROVED;
-      await registrationRequest.save();
-      
+      // Handle based on action
+      if (action === 'approve') {
+        // Create a new user from the registration request
+        const newUser = await tx.user.create({
+          data: {
+            username: registrationRequest.username,
+            email: registrationRequest.email,
+            password: registrationRequest.password, // Password is already hashed
+            firstName: registrationRequest.firstName,
+            lastName: registrationRequest.lastName,
+            role: registrationRequest.requestedRole,
+          }
+        });
+        
+        // Update the registration request status
+        await tx.registrationRequest.update({
+          where: { id: requestId },
+          data: { status: RequestStatus.APPROVED }
+        });
+        
+        return { user: newUser };
+      } else {
+        // Reject the registration request
+        await tx.registrationRequest.update({
+          where: { id: requestId },
+          data: {
+            status: RequestStatus.REJECTED,
+            rejectionReason
+          }
+        });
+        
+        return null;
+      }
+    });
+    
+    if (result?.user) {
       return NextResponse.json({ 
         message: 'Registration request approved successfully',
-        user: { 
-          id: newUser._id,
-          username: newUser.username,
-          email: newUser.email,
-          role: newUser.role
+        user: {
+          id: result.user.id,
+          username: result.user.username,
+          email: result.user.email,
+          role: result.user.role
         }
       }, { status: 200 });
     } else {
-      // Reject the registration request
-      registrationRequest.status = RequestStatus.REJECTED;
-      registrationRequest.rejectionReason = rejectionReason;
-      await registrationRequest.save();
-      
       return NextResponse.json({ 
         message: 'Registration request rejected successfully'
       }, { status: 200 });
     }
   } catch (error) {
     console.error('Error processing registration request:', error);
+    if (error instanceof Error && error.message === 'Registration request not found') {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 } 

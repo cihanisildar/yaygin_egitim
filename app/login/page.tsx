@@ -7,21 +7,19 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const { login, loading } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!firstName || !lastName || !password) {
-      toast.error('Ad, soyad ve şifre gereklidir');
+    if (!username || !password) {
+      toast.error('Kullanıcı adı ve şifre gereklidir');
       return;
     }
 
     try {
-      const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, '');
       await login(username, password);
     } catch (err: unknown) {
       console.error('Login error:', err);
@@ -46,31 +44,16 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
-              Ad
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+              Kullanıcı Adı
             </label>
             <input
               type="text"
-              id="firstName"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              id="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-              placeholder="Adınızı girin"
-              disabled={loading}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
-              Soyad
-            </label>
-            <input
-              type="text"
-              id="lastName"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
-              placeholder="Soyadınızı girin"
+              placeholder="Kullanıcı adınızı girin"
               disabled={loading}
             />
           </div>

@@ -27,6 +27,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, useCallback } from "react";
+import { UserRole } from "@prisma/client";
+import { redirect } from 'next/navigation';
 
 type Student = {
   id: string;
@@ -235,23 +237,31 @@ function StudentsList() {
   const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/users?role=student&tutorId=${user?.id}`);
+      setError('');
+      
+      if (!user?.id) {
+        throw new Error('Kullanıcı bilgisi bulunamadı');
+      }
+
+      const response = await fetch(`/api/users?role=STUDENT&tutorId=${user.id}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch students');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Öğrenciler yüklenirken bir hata oluştu');
       }
       
       const data = await response.json();
-      setStudents(data.students || []);
+      setStudents(data.users || []);
       setPagination({
-        total: data.total || 0,
-        page: data.page || 1,
-        limit: data.limit || 10,
-        totalPages: data.totalPages || 0
+        total: data.pagination?.total || 0,
+        page: data.pagination?.page || 1,
+        limit: data.pagination?.limit || 10,
+        totalPages: data.pagination?.pages || 0
       });
     } catch (err) {
       console.error('Error fetching students:', err);
-      setError('Öğrenci bilgilerini yüklerken bir hata oluştu. Lütfen daha sonra tekrar deneyin.');
+      setError(err instanceof Error ? err.message : 'Öğrenci bilgilerini yüklerken bir hata oluştu');
+      setStudents([]);
     } finally {
       setLoading(false);
     }
@@ -296,8 +306,10 @@ function StudentsList() {
   }, [students, searchQuery, sortBy, sortOrder, activeTab]);
 
   useEffect(() => {
-    fetchStudents();
-  }, [fetchStudents]);
+    if (user?.id) {
+      fetchStudents();
+    }
+  }, [fetchStudents, user?.id]);
 
   useEffect(() => {
     applyFilters();
@@ -490,13 +502,19 @@ function StudentsList() {
 }
 
 export default function TutorStudentsPage() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (user && user.role !== UserRole.TUTOR) {
+      // Redirect non-tutor users to their appropriate dashboard
+      redirect('/student');
+    }
+    
     // Simulate initial load
     const timer = setTimeout(() => setLoading(false), 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [user]);
 
   return (
     <div className="container mx-auto px-4 py-8">

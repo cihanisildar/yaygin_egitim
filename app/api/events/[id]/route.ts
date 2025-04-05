@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import Event from '@/models/Event';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/server-auth';
 
 // Get a specific event by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -18,7 +17,7 @@ export async function GET(
       );
     }
 
-    const { id } = await params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -27,9 +26,40 @@ export async function GET(
       );
     }
 
-    await connectToDatabase();
-
-    const event = await Event.findById(id).populate('createdBy', 'username firstName lastName');
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        location: true,
+        type: true,
+        capacity: true,
+        points: true,
+        tags: true,
+        status: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        updatedBy: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        createdAt: true,
+        updatedAt: true
+      }
+    });
 
     if (!event) {
       return NextResponse.json(
@@ -38,39 +68,7 @@ export async function GET(
       );
     }
 
-    // Get the populated user data
-    const createdByUser = event.createdBy as unknown as { 
-      _id: string;
-      username: string;
-      firstName?: string;
-      lastName?: string;
-    };
-
-    return NextResponse.json(
-      { 
-        event: {
-          id: event._id,
-          title: event.title,
-          description: event.description,
-          startDateTime: event.startDateTime,
-          endDateTime: event.endDateTime,
-          location: event.location,
-          type: event.type,
-          capacity: event.capacity,
-          points: event.points,
-          tags: event.tags,
-          status: event.status,
-          createdBy: {
-            id: createdByUser._id,
-            username: createdByUser.username,
-            firstName: createdByUser.firstName,
-            lastName: createdByUser.lastName
-          },
-          createdAt: event.createdAt,
-        }
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ event }, { status: 200 });
   } catch (error) {
     console.error('Get event error:', error);
     return NextResponse.json(
@@ -83,7 +81,7 @@ export async function GET(
 // Update an event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -95,7 +93,7 @@ export async function PUT(
       );
     }
 
-    const { id } = await params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -104,19 +102,20 @@ export async function PUT(
       );
     }
 
-    await connectToDatabase();
+    // Check if event exists and user has permission
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+      select: { createdById: true }
+    });
 
-    const event = await Event.findById(id);
-
-    if (!event) {
+    if (!existingEvent) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       );
     }
 
-    // Check if the user is the creator of the event
-    if (event.createdBy.toString() !== currentUser.id) {
+    if (existingEvent.createdById !== currentUser.id) {
       return NextResponse.json(
         { error: 'Unauthorized: You can only update your own events' },
         { status: 403 }
@@ -124,46 +123,80 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { title, description, startDateTime, endDateTime, location, type, capacity, points, tags, status } = body;
+    const { title, description, startDate, endDate, location, type, capacity, points, tags, status } = body;
 
-    // Update event fields
-    if (title) event.title = title;
-    if (description) event.description = description;
-    if (startDateTime) event.startDateTime = new Date(startDateTime);
-    if (endDateTime) event.endDateTime = new Date(endDateTime);
-    if (location) event.location = location;
-    if (type) event.type = type;
-    if (capacity) event.capacity = capacity;
-    if (points !== undefined) event.points = points;
-    if (tags) event.tags = tags;
-    if (status) event.status = status;
+    // Validate dates if provided
+    if (startDate && endDate) {
+      const startDateTime = new Date(startDate);
+      const endDateTime = new Date(endDate);
 
-    await event.save();
+      if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+        return NextResponse.json(
+          { error: 'Invalid date format' },
+          { status: 400 }
+        );
+      }
 
-    return NextResponse.json(
-      {
-        message: 'Event updated successfully',
-        event: {
-          id: event._id,
-          title: event.title,
-          description: event.description,
-          startDateTime: event.startDateTime,
-          endDateTime: event.endDateTime,
-          location: event.location,
-          type: event.type,
-          capacity: event.capacity,
-          points: event.points,
-          tags: event.tags,
-          status: event.status,
-          createdBy: {
-            id: currentUser.id,
-            username: currentUser.username
-          },
-          createdAt: event.createdAt,
-        }
+      if (endDateTime < startDateTime) {
+        return NextResponse.json(
+          { error: 'End date cannot be before start date' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const event = await prisma.event.update({
+      where: { id },
+      data: {
+        ...(title && { title }),
+        ...(description && { description }),
+        ...(startDate && { startDate: new Date(startDate) }),
+        ...(endDate && { endDate: new Date(endDate) }),
+        ...(location && { location }),
+        ...(type && { type }),
+        ...(capacity && { capacity: parseInt(capacity) }),
+        ...(points !== undefined && { points: parseInt(points) }),
+        ...(tags && { tags }),
+        ...(status && { status }),
+        updatedById: currentUser.id
       },
-      { status: 200 }
-    );
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        startDate: true,
+        endDate: true,
+        location: true,
+        type: true,
+        capacity: true,
+        points: true,
+        tags: true,
+        status: true,
+        createdBy: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        updatedBy: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    return NextResponse.json({
+      message: 'Event updated successfully',
+      event
+    }, { status: 200 });
   } catch (error) {
     console.error('Update event error:', error);
     return NextResponse.json(
@@ -176,7 +209,7 @@ export async function PUT(
 // Delete an event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -188,7 +221,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = await params;
+    const { id } = params;
     
     if (!id) {
       return NextResponse.json(
@@ -197,31 +230,40 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
+    // Check if event exists and user has permission
+    const existingEvent = await prisma.event.findUnique({
+      where: { id },
+      select: { createdById: true }
+    });
 
-    const event = await Event.findById(id);
-
-    if (!event) {
+    if (!existingEvent) {
       return NextResponse.json(
         { error: 'Event not found' },
         { status: 404 }
       );
     }
 
-    // Check if the user is the creator of the event
-    if (event.createdBy.toString() !== currentUser.id) {
+    if (existingEvent.createdById !== currentUser.id) {
       return NextResponse.json(
         { error: 'Unauthorized: You can only delete your own events' },
         { status: 403 }
       );
     }
 
-    await event.deleteOne();
+    const event = await prisma.event.delete({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        startDate: true,
+        endDate: true
+      }
+    });
 
-    return NextResponse.json(
-      { message: 'Event deleted successfully' },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      message: 'Event deleted successfully',
+      event
+    }, { status: 200 });
   } catch (error) {
     console.error('Delete event error:', error);
     return NextResponse.json(

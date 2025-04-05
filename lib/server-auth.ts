@@ -1,17 +1,15 @@
 import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import { UserJwtPayload } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 // Name of the auth cookie - specific to this project
 export const AUTH_COOKIE_NAME = 'ogrtakip-session';
-// Token expiration time in seconds (24 hours)
-const TOKEN_EXPIRATION_SECONDS = 24 * 60 * 60;
-// Refresh token expiration time in seconds (7 days)
-const REFRESH_TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60;
 export const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
+export const TOKEN_EXPIRATION_SECONDS = 60 * 60; // 1 hour
+export const REFRESH_TOKEN_EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 // Add authentication utility functions
 export function isAuthenticated(user: UserJwtPayload | null) {
@@ -58,12 +56,6 @@ export async function signJWT(payload: UserJwtPayload) {
   return { token, refreshToken };
 }
 
-export async function getJWTFromCookies() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  return token;
-}
-
 export function setJWTCookie(response: NextResponse, token: string, refreshToken: string) {
   response.cookies.set({
     name: AUTH_COOKIE_NAME,
@@ -74,7 +66,7 @@ export function setJWTCookie(response: NextResponse, token: string, refreshToken
     sameSite: 'strict',
     path: '/',
   });
-
+  
   response.cookies.set({
     name: REFRESH_TOKEN_COOKIE_NAME,
     value: refreshToken,
@@ -84,8 +76,12 @@ export function setJWTCookie(response: NextResponse, token: string, refreshToken
     sameSite: 'strict',
     path: '/',
   });
-  
-  return response;
+}
+
+export async function getJWTFromCookies() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  return token;
 }
 
 export async function getUserFromRequest(request: NextRequest) {
@@ -206,7 +202,7 @@ export async function verifyRefreshToken(refreshToken: string): Promise<{ token:
 export async function checkIsAdmin(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
-    return user?.role === 'admin';
+    return user?.role === UserRole.ADMIN;
   } catch {
     return false;
   }

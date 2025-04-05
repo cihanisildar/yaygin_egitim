@@ -78,41 +78,11 @@ export default function StudentStore() {
         } else {
           setItems(data.items);
         }
-      } catch (err: Error | unknown) {
+      } catch (err: unknown) {
         console.error("Error fetching store items:", err);
-
-        // Handle timeout specially
-        if (err instanceof Error) {
-          if (err.name === "AbortError" || err.name === "TimeoutError") {
-            setUseFallback(true);
-            setItems([]);
-            setError(
-              "Sunucu bağlantı zaman aşımı. Örnek veriler gösteriliyor."
-            );
-          } else {
-            setError(
-              `${
-                err.message || "Failed to load store items. Please try again."
-              }`
-            );
-
-            // For critical errors, use fallback data
-            if (
-              err.message.includes("MongoDB") ||
-              err.message.includes("database") ||
-              err.message.includes("connection") ||
-              err.message.includes("Server error")
-            ) {
-              setUseFallback(true);
-              setItems([]);
-              setError(
-                "Veritabanı veya sunucu sorunu. Örnek veriler gösteriliyor."
-              );
-            }
-          }
-        } else {
-          setError("An unknown error occurred");
-        }
+        setError(
+          err instanceof Error ? err.message : "An error occurred while processing your request. Please try again."
+        );
       } finally {
         setLoading(false);
       }

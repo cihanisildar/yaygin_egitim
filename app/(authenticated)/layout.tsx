@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Button } from "../../components/ui/button";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 import { LogOut, LayoutDashboard, Users, FileText, Calendar, ShoppingBag, PieChart, GraduationCap, Trophy, ShoppingCart, ClipboardList } from "lucide-react";
+import { UserRole } from '@prisma/client';
 
 // Define the type for navigation links
 interface NavLink {
@@ -180,7 +181,7 @@ export default function AuthenticatedLayout({
               {isExpanded && (
                 <div className="ml-3 overflow-hidden">
                   <p className="text-sm font-medium text-gray-800 truncate tracking-wide">{user?.username}</p>
-                  <p className="text-xs text-gray-500 tracking-wide">{user?.role === 'admin' ? 'Yönetici' : user?.role === 'tutor' ? 'Öğretmen' : 'Öğrenci'}</p>
+                  <p className="text-xs text-gray-500 tracking-wide">{user?.role === UserRole.ADMIN ? 'Yönetici' : user?.role === UserRole.TUTOR ? 'Öğretmen' : 'Öğrenci'}</p>
                 </div>
               )}
               

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
+import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 import { isAdmin, isAuthenticated, isTutor } from '@/lib/auth';
 import { getUserFromRequest } from '@/lib/server-auth';
 
@@ -40,9 +40,17 @@ export async function POST(
       );
     }
 
-    await connectToDatabase();
-
-    const user = await User.findById(id);
+    // Get user with current points
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        points: true,
+        role: true,
+        tutorId: true
+      }
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -53,7 +61,7 @@ export async function POST(
     
     // If tutor, can only modify points of their students
     if (isTutor(currentUser) && !isAdmin(currentUser)) {
-      if (user.role !== UserRole.STUDENT || user.tutorId?.toString() !== currentUser.id) {
+      if (user.role !== UserRole.STUDENT || user.tutorId !== currentUser.id) {
         return NextResponse.json(
           { error: 'You can only modify points for your own students' },
           { status: 403 }
@@ -61,7 +69,7 @@ export async function POST(
       }
     }
     
-    // Update points based on action
+    // Calculate new points based on action
     let newPoints = user.points || 0;
     
     switch (action) {
@@ -76,20 +84,21 @@ export async function POST(
         break;
     }
     
-    user.points = newPoints;
-    await user.save();
+    // Update user points
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: { points: newPoints },
+      select: {
+        id: true,
+        username: true,
+        points: true
+      }
+    });
 
-    return NextResponse.json(
-      {
-        message: 'Points updated successfully',
-        user: {
-          id: user._id,
-          username: user.username,
-          points: user.points,
-        }
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      message: 'Points updated successfully',
+      user: updatedUser
+    });
   } catch (error) {
     console.error('Update points error:', error);
     return NextResponse.json(

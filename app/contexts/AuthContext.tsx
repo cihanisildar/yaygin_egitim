@@ -8,7 +8,7 @@ import {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import { UserRole } from "@/models/User";
+import { UserRole } from "@prisma/client";
 import toast from 'react-hot-toast';
 
 type AuthUser = {

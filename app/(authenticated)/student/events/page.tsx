@@ -175,9 +175,10 @@ function EventsList() {
       const response = await fetch('/api/events');
       if (!response.ok) throw new Error('Etkinlikler yüklenirken bir hata oluştu');
       const data = await response.json();
-      setEvents(data.events);
+      setEvents(data?.events || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu');
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -187,7 +188,19 @@ function EventsList() {
     fetchEvents();
   }, []);
 
-  const filteredEvents = events.filter(event => {
+  if (loading) {
+    return <LoadingEvents />;
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        {error}
+      </div>
+    );
+  }
+
+  const filteredEvents = (events || []).filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = activeFilter === 'all' || event.status === activeFilter;
@@ -232,14 +245,6 @@ function EventsList() {
     });
   };
 
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <>
       <EventsFilter
@@ -250,9 +255,7 @@ function EventsList() {
       />
 
       <div className="mt-6">
-        {loading ? (
-          <LoadingEvents />
-        ) : filteredEvents.length > 0 ? (
+        {filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
               <Card key={event.id} className="border-0 shadow-md hover:shadow-lg transition-shadow">

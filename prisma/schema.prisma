@@ -1,0 +1,130 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TUTOR
+  STUDENT
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  REWARD
+  PURCHASE
+  REFUND
+}
+
+model User {
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  password      String
+  role          UserRole
+  firstName     String?
+  lastName      String?
+  points        Int       @default(0)
+  tutor         User?     @relation("TutorStudents", fields: [tutorId], references: [id])
+  tutorId       String?
+  students      User[]    @relation("TutorStudents")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  eventsCreated       Event[]            @relation("CreatedBy")
+  eventsUpdated       Event[]            @relation("UpdatedBy")
+  itemRequestsStudent ItemRequest[]      @relation("StudentRequests")
+  itemRequestsTutor   ItemRequest[]      @relation("TutorRequests")
+  transactionsStudent PointsTransaction[] @relation("StudentTransactions")
+  transactionsTutor   PointsTransaction[] @relation("TutorTransactions")
+  registrationRequests RegistrationRequest[] @relation("TutorRegistrationRequests")
+}
+
+model RegistrationRequest {
+  id              String        @id @default(cuid())
+  username        String        @unique
+  email           String        @unique
+  password        String
+  firstName       String?
+  lastName        String?
+  requestedRole   UserRole
+  tutor           User?        @relation("TutorRegistrationRequests", fields: [tutorId], references: [id])
+  tutorId         String?
+  status          RequestStatus @default(PENDING)
+  rejectionReason String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Event {
+  id            String    @id @default(cuid())
+  title         String
+  description   String
+  startDate     DateTime
+  endDate       DateTime
+  location      String    @default("Online")
+  type          String    @default("in-person")
+  capacity      Int       @default(20)
+  points        Int       @default(0)
+  tags          String[]  @default([])
+  status        String    @default("upcoming")
+  createdBy     User      @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById   String
+  updatedBy     User?     @relation("UpdatedBy", fields: [updatedById], references: [id])
+  updatedById   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model StoreItem {
+  id                String        @id @default(cuid())
+  name             String
+  description      String
+  pointsRequired   Int
+  availableQuantity Int
+  imageUrl         String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  itemRequests     ItemRequest[]
+}
+
+model ItemRequest {
+  id          String        @id @default(cuid())
+  student     User          @relation("StudentRequests", fields: [studentId], references: [id])
+  studentId   String
+  tutor       User          @relation("TutorRequests", fields: [tutorId], references: [id])
+  tutorId     String
+  item        StoreItem     @relation(fields: [itemId], references: [id])
+  itemId      String
+  status      RequestStatus @default(PENDING)
+  pointsSpent Int
+  note        String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PointsTransaction {
+  id        String          @id @default(cuid())
+  student   User            @relation("StudentTransactions", fields: [studentId], references: [id])
+  studentId String
+  tutor     User            @relation("TutorTransactions", fields: [tutorId], references: [id])
+  tutorId   String
+  points    Int
+  type      TransactionType
+  reason    String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+} 

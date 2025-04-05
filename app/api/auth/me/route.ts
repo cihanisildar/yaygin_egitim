@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User from '@/models/User';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/server-auth';
 
 export async function GET(request: NextRequest) {
@@ -14,9 +13,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
-    const user = await User.findById(currentUser.id).select('-password');
+    const user = await prisma.user.findUnique({
+      where: { id: currentUser.id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        points: true,
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -25,20 +41,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          points: user.points,
-        }
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ user });
   } catch (error) {
     console.error('Get user error:', error);
     return NextResponse.json(

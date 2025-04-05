@@ -172,37 +172,41 @@ export default function StudentDashboard() {
         
         // Get leaderboard to determine rank
         const leaderboardRes = await fetch('/api/leaderboard');
-        const leaderboardData: { leaderboard: LeaderboardStudent[] } = await leaderboardRes.json();
+        const leaderboardData = await leaderboardRes.json();
+        const leaderboard = leaderboardData?.leaderboard || [];
         
         // Find user's rank
-        const userRank = leaderboardData.leaderboard.findIndex(
+        const userRank = leaderboard.findIndex(
           (student: LeaderboardStudent) => student.id === user?.id
         ) + 1;
         
         // Get upcoming events
         const eventsRes = await fetch('/api/events');
-        const eventsData: { events: Event[] } = await eventsRes.json();
+        const eventsData = await eventsRes.json();
+        const events = eventsData?.events || [];
         
         // Get points history
         const pointsRes = await fetch('/api/points');
-        const pointsData: { transactions: PointHistory[] } = await pointsRes.json();
+        const pointsData = await pointsRes.json();
+        const transactions = pointsData?.transactions || [];
         
         // Get requests
         const requestsRes = await fetch('/api/requests');
-        const requestsData: { requests: Request[] } = await requestsRes.json();
+        const requestsData = await requestsRes.json();
+        const requests = requestsData?.requests || [];
         
-        const pendingRequests = requestsData.requests.filter(
+        const pendingRequests = requests.filter(
           (req: Request) => req.status === 'pending'
         ).length;
         
-        const approvedRequests = requestsData.requests.filter(
+        const approvedRequests = requests.filter(
           (req: Request) => req.status === 'approved'
         ).length;
         
         setStats({
           points: user?.points || 0,
           rank: userRank,
-          totalStudents: leaderboardData.leaderboard.length,
+          totalStudents: leaderboard.length,
           pendingRequests,
           approvedRequests,
         });
@@ -211,7 +215,7 @@ export default function StudentDashboard() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        const upcoming = eventsData.events
+        const upcoming = events
           .filter((event: Event) => new Date(event.date) >= today)
           .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 3);
@@ -219,7 +223,7 @@ export default function StudentDashboard() {
         setUpcomingEvents(upcoming);
         
         // Get recent point history (last 5 transactions)
-        const recent = pointsData.transactions
+        const recent = transactions
           .sort((a: PointHistory, b: PointHistory) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 5);
         

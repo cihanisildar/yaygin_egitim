@@ -1,6 +1,6 @@
 "use client"
 
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import { UserJwtPayload } from './types';
 
 export function isAuthenticated(user: UserJwtPayload | null) {

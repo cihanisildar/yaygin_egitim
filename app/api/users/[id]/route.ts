@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
+import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
 import { isAdmin, isAuthenticated, isTutor, getUserFromRequest } from '@/lib/server-auth';
 
 export async function GET(
@@ -18,10 +18,29 @@ export async function GET(
     }
     
     const { id } = await params;
-    
-    await connectToDatabase();
 
-    const user = await User.findById(id).select('-password');
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        points: true,
+        tutorId: true,
+        createdAt: true,
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
 
     if (!user) {
       return NextResponse.json(
@@ -39,8 +58,7 @@ export async function GET(
     const isTutorViewingStudent = 
       isTutor(currentUser) && 
       user.role === UserRole.STUDENT && 
-      user.tutorId && 
-      user.tutorId.toString() === currentUser?.id;
+      user.tutorId === currentUser?.id;
     
     if (!isSelf && !isAdminUser && !isTutorViewingStudent) {
       return NextResponse.json(
@@ -49,22 +67,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(
-      {
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          points: user.points,
-          tutorId: user.tutorId,
-          createdAt: user.createdAt,
-        }
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({ user });
   } catch (error) {
     console.error('Get user error:', error);
     return NextResponse.json(
@@ -92,11 +95,12 @@ export async function PUT(
     const body = await request.json();
     const { username, email, role, tutorId, firstName, lastName, points } = body;
 
-    await connectToDatabase();
+    // Check if user exists
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
+    });
 
-    const user = await User.findById(id);
-
-    if (!user) {
+    if (!existingUser) {
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
@@ -104,16 +108,18 @@ export async function PUT(
     }
 
     // Check for duplicate username or email if changing
-    if ((username && username !== user.username) || (email && email !== user.email)) {
-      const existingUser = await User.findOne({
-        _id: { $ne: id },
-        $or: [
-          ...(username ? [{ username }] : []),
-          ...(email ? [{ email }] : []),
-        ],
+    if ((username && username !== existingUser.username) || (email && email !== existingUser.email)) {
+      const duplicate = await prisma.user.findFirst({
+        where: {
+          NOT: { id },
+          OR: [
+            ...(username ? [{ username }] : []),
+            ...(email ? [{ email }] : []),
+          ],
+        },
       });
 
-      if (existingUser) {
+      if (duplicate) {
         return NextResponse.json(
           { error: 'Username or email already exists' },
           { status: 409 }
@@ -121,63 +127,67 @@ export async function PUT(
       }
     }
 
-    // Update user fields
-    if (username) user.username = username;
-    if (email) user.email = email;
-    if (role && Object.values(UserRole).includes(role as UserRole)) {
-      user.role = role as UserRole;
-    }
-    if (firstName !== undefined) user.firstName = firstName;
-    if (lastName !== undefined) user.lastName = lastName;
-    
-    // Update points if provided
-    if (points !== undefined) {
-      user.points = parseInt(points) || 0;
-    }
-    
-    // Update tutorId if provided and user is a student
-    if (role === UserRole.STUDENT || user.role === UserRole.STUDENT) {
-      if (tutorId) {
-        // Verify tutor exists and is a tutor
-        const tutor = await User.findOne({ 
-          _id: tutorId, 
-          role: UserRole.TUTOR 
-        });
-        
-        if (!tutor) {
-          return NextResponse.json(
-            { error: 'Invalid tutor ID provided' },
-            { status: 400 }
-          );
+    // If tutorId is provided and user is/will be a student, verify tutor exists
+    if ((role === UserRole.STUDENT || existingUser.role === UserRole.STUDENT) && tutorId) {
+      const tutor = await prisma.user.findFirst({
+        where: {
+          id: tutorId,
+          role: UserRole.TUTOR
         }
-        
-        user.tutorId = tutorId;
-      } else if (role === UserRole.STUDENT && !tutorId && !user.tutorId) {
+      });
+
+      if (!tutor) {
         return NextResponse.json(
-          { error: 'Tutor ID is required for students' },
+          { error: 'Invalid tutor ID provided' },
           { status: 400 }
         );
       }
     }
 
-    await user.save();
+    // If user is becoming a student and no tutor is assigned
+    if (role === UserRole.STUDENT && !tutorId && !existingUser.tutorId) {
+      return NextResponse.json(
+        { error: 'Tutor ID is required for students' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json(
-      {
-        message: 'User updated successfully',
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          points: user.points,
-          tutorId: user.tutorId,
-        }
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(username && { username }),
+        ...(email && { email }),
+        ...(role && { role: role as UserRole }),
+        ...(firstName !== undefined && { firstName }),
+        ...(lastName !== undefined && { lastName }),
+        ...(points !== undefined && { points: parseInt(points) || 0 }),
+        ...(tutorId && { tutorId })
       },
-      { status: 200 }
-    );
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        points: true,
+        tutorId: true,
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json({
+      message: 'User updated successfully',
+      user: updatedUser
+    });
   } catch (error) {
     console.error('Update user error:', error);
     return NextResponse.json(
@@ -211,16 +221,10 @@ export async function DELETE(
       );
     }
 
-    await connectToDatabase();
-
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
+    // Delete user
+    await prisma.user.delete({
+      where: { id }
+    });
 
     return NextResponse.json(
       { message: 'User deleted successfully' },

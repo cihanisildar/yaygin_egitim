@@ -1,10 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import { ArrowRight, UserPlus2 } from 'lucide-react';
+
+type Tutor = {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+};
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,11 +20,30 @@ export default function RegisterPage() {
     firstName: '',
     lastName: '',
     requestedRole: UserRole.STUDENT,
+    tutorId: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
   const router = useRouter();
+
+  useEffect(() => {
+    // Fetch tutors when the component mounts
+    const fetchTutors = async () => {
+      try {
+        const response = await fetch('/api/tutors');
+        const data = await response.json();
+        if (response.ok) {
+          setTutors(data.tutors);
+        }
+      } catch (err) {
+        console.error('Error fetching tutors:', err);
+      }
+    };
+
+    fetchTutors();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -45,6 +71,12 @@ export default function RegisterPage() {
       return;
     }
 
+    if (formData.requestedRole === UserRole.STUDENT && !formData.tutorId) {
+      setError('Öğrenci kaydı için öğretmen seçimi gereklidir');
+      setLoading(false);
+      return;
+    }
+
     try {
       const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`.replace(/\s+/g, '');
       const email = `${username}@example.com`;
@@ -61,6 +93,7 @@ export default function RegisterPage() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           requestedRole: formData.requestedRole,
+          tutorId: formData.requestedRole === UserRole.STUDENT ? formData.tutorId : undefined,
         }),
       });
 
@@ -78,6 +111,7 @@ export default function RegisterPage() {
         firstName: '',
         lastName: '',
         requestedRole: UserRole.STUDENT,
+        tutorId: '',
       });
 
       setTimeout(() => {
@@ -209,6 +243,31 @@ export default function RegisterPage() {
               <option value={UserRole.TUTOR}>Eğitmen</option>
             </select>
           </div>
+
+          {formData.requestedRole === UserRole.STUDENT && (
+            <div>
+              <label htmlFor="tutorId" className="block text-sm font-medium text-gray-700 mb-1">
+                Öğretmen Seçimi
+              </label>
+              <select
+                id="tutorId"
+                name="tutorId"
+                value={formData.tutorId}
+                onChange={handleChange}
+                className="block w-full px-3 py-2 rounded-lg border border-gray-200 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                disabled={loading || !!success}
+              >
+                <option value="">Öğretmen Seçin</option>
+                {tutors.map((tutor) => (
+                  <option key={tutor.id} value={tutor.id}>
+                    {tutor.firstName && tutor.lastName
+                      ? `${tutor.firstName} ${tutor.lastName}`
+                      : tutor.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <button
             type="submit"

@@ -1,9 +1,7 @@
 'use server';
 
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
-import mongoose from 'mongoose';
-import { FilterQuery } from '@/types/common';
+import { prisma } from '@/lib/prisma';
+import { UserRole, Prisma } from '@prisma/client';
 
 interface LeaderboardQuery {
   tutorId?: string;
@@ -11,14 +9,14 @@ interface LeaderboardQuery {
   limit?: number;
 }
 
-interface MongoQuery {
+interface PrismaQuery {
   tutorId?: string;
-  createdAt?: { $gte: Date };
+  createdAt?: { gte: Date };
   role?: UserRole;
 }
 
 export async function getLeaderboardData(params: LeaderboardQuery = {}) {
-  const query: FilterQuery = {};
+  const query: PrismaQuery = {};
   
   if (params.tutorId) {
     query.tutorId = params.tutorId;
@@ -42,7 +40,7 @@ export async function getLeaderboardData(params: LeaderboardQuery = {}) {
         break;
     }
 
-    query.createdAt = { $gte: startDate };
+    query.createdAt = { gte: startDate };
   }
 
   const limit = params.limit || 10;
@@ -52,29 +50,37 @@ export async function getLeaderboardData(params: LeaderboardQuery = {}) {
 
 export async function getLeaderboard(tutorId?: string, limit: number = 100) {
   try {
-    await connectToDatabase();
-
-    const query: MongoQuery = { role: UserRole.STUDENT };
+    const where: Prisma.UserWhereInput = { role: UserRole.STUDENT };
     
     // If tutorId is provided, filter students by tutor
     if (tutorId) {
-      query.tutorId = tutorId;
+      where.tutorId = tutorId;
     }
 
-    const students = await User.find(query)
-      .select('username firstName lastName points tutorId')
-      .sort({ points: -1 })
-      .limit(limit)
-      .populate('tutorId', 'username firstName lastName');
+    const students = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        points: true,
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: { points: 'desc' },
+      take: limit
+    });
 
     return students.map((student, index) => ({
       rank: index + 1,
-      id: student._id,
-      username: student.username,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      points: student.points,
-      tutor: student.tutorId,
+      ...student
     }));
   } catch (error) {
     console.error('Get leaderboard error:', error);
@@ -84,53 +90,50 @@ export async function getLeaderboard(tutorId?: string, limit: number = 100) {
 
 export async function getUserRank(userId: string) {
   try {
-    await connectToDatabase();
+    // Get total number of students
+    const totalStudents = await prisma.user.count({
+      where: { role: UserRole.STUDENT }
+    });
     
-    const totalStudents = await User.countDocuments({ role: UserRole.STUDENT });
+    // Get all students ordered by points to calculate rank
+    const students = await prisma.user.findMany({
+      where: { role: UserRole.STUDENT },
+      orderBy: { points: 'desc' },
+      select: { id: true }
+    });
     
-    const userRank = await User.aggregate([
-      { $match: { role: UserRole.STUDENT } },
-      { $sort: { points: -1 } },
-      { 
-        $group: { 
-          _id: null, 
-          students: { $push: "$$ROOT" } 
-        } 
-      },
-      { 
-        $project: { 
-          userRank: { 
-            $add: [
-              { $indexOfArray: ["$students._id", mongoose.Types.ObjectId.createFromHexString(userId)] },
-              1
-            ] 
-          },
-          totalStudents: { $size: "$students" }
-        } 
+    // Find user's position in the ordered list
+    const userIndex = students.findIndex(student => student.id === userId);
+    const rank = userIndex !== -1 ? userIndex + 1 : null;
+    
+    // Get user details
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        points: true,
+        tutor: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true
+          }
+        }
       }
-    ]);
-    
-    const user = await User.findById(userId)
-      .select('username firstName lastName points tutorId')
-      .populate('tutorId', 'username firstName lastName');
+    });
     
     if (!user) {
       throw new Error('User not found');
     }
     
-    const rank = userRank.length > 0 ? userRank[0].userRank : null;
-    
     return {
-      rank: rank,
+      rank,
       totalStudents,
-      user: {
-        id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        points: user.points,
-        tutor: user.tutorId
-      }
+      user
     };
   } catch (error) {
     console.error('Get user rank error:', error);

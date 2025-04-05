@@ -2,7 +2,7 @@
 
 import PointsUpdateDialog from "@/app/components/PointsUpdateDialog";
 import { Button } from "@/components/ui/button";
-import { UserRole } from "@/models/User";
+import { UserRole } from "@prisma/client";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -85,7 +85,7 @@ export default function EditUserPage() {
 
     const fetchTutors = async () => {
       try {
-        const response = await fetch("/api/users?role=tutor");
+        const response = await fetch(`/api/users?role=${UserRole.TUTOR}`);
 
         if (!response.ok) {
           throw new Error("Öğretmenler alınamadı");

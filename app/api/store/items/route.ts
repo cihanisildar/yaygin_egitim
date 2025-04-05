@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
-import StoreItem from '@/models/StoreItem';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,12 +13,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
     // Fetch all store items from the database
-    const items = await StoreItem.find()
-      .sort({ pointsRequired: 1 })
-      .select('-__v');
+    const items = await prisma.storeItem.findMany({
+      orderBy: {
+        pointsRequired: 'asc'
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        pointsRequired: true,
+        availableQuantity: true,
+        imageUrl: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
 
     return NextResponse.json({ items }, { status: 200 });
   } catch (error: unknown) {

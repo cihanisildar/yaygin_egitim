@@ -19,7 +19,7 @@ interface LeaderboardEntry {
   firstName: string | null;
   lastName: string | null;
   points: number;
-  tutor: {
+  tutor?: {
     id: string;
     username: string;
     firstName: string | null;
@@ -52,8 +52,12 @@ export default function AdminLeaderboardPage() {
         
         // Fetch all students for the leaderboard using the server action
         const leaderboardData = await getLeaderboard(undefined, 1000);
-        setLeaderboard(leaderboardData);
-        setFilteredLeaderboard(leaderboardData);
+        const formattedData = leaderboardData.map(entry => ({
+          ...entry,
+          tutor: entry.tutor || undefined
+        }));
+        setLeaderboard(formattedData);
+        setFilteredLeaderboard(formattedData);
         
         // Fetch tutors using the server action
         const tutorsData = await getStudents({ 

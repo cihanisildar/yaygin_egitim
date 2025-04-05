@@ -8,12 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { IRegistrationRequest } from '@/models/RegistrationRequest';
+import { RegistrationRequest, RequestStatus, UserRole } from '@prisma/client';
 import { AlertCircle, CheckCircle2, Clock, Filter, Search, UserPlus, XCircle } from 'lucide-react';
-import { Types } from 'mongoose';
 import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState, useCallback } from 'react';
-type RegistrationRequestWithId = IRegistrationRequest & { _id: Types.ObjectId };
+import { useToast } from "@/components/ui/use-toast";
 
 // Loading component for the requests list
 function LoadingState() {
@@ -34,16 +33,17 @@ function LoadingState() {
 function RegistrationRequestsContent() {
   const router = useRouter();
   const { user, isAdmin } = useAuth();
-  const [requests, setRequests] = useState<RegistrationRequestWithId[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<RegistrationRequestWithId[]>([]);
+  const { toast } = useToast();
+  const [requests, setRequests] = useState<RegistrationRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<RegistrationRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<RegistrationRequestWithId | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -83,10 +83,15 @@ function RegistrationRequestsContent() {
       const error = err instanceof Error ? err.message : 'An unknown error occurred';
       setError(error);
       console.error('Error fetching registration requests:', err);
+      toast({
+        title: "Hata!",
+        description: "Kayıt talepleri yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [router, user, isAdmin]);
+  }, [router, user, isAdmin, toast]);
 
   useEffect(() => {
     if (user) {
@@ -99,18 +104,15 @@ function RegistrationRequestsContent() {
     
     // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
       filtered = filtered.filter(request => 
-        request.username.toLowerCase().includes(query) ||
-        request.email.toLowerCase().includes(query) ||
-        (request.firstName && request.firstName.toLowerCase().includes(query)) ||
-        (request.lastName && request.lastName.toLowerCase().includes(query))
+        request.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        request.email.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(request => request.status === statusFilter);
+      filtered = filtered.filter(request => request.status === statusFilter as RequestStatus);
     }
     
     setFilteredRequests(filtered);
@@ -155,19 +157,19 @@ function RegistrationRequestsContent() {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: RequestStatus) => {
     switch (status) {
-      case 'pending':
+      case RequestStatus.PENDING:
         return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
           <Clock className="w-3 h-3 mr-1" />
           Bekliyor
         </Badge>;
-      case 'approved':
+      case RequestStatus.APPROVED:
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
           <CheckCircle2 className="w-3 h-3 mr-1" />
           Onaylandı
         </Badge>;
-      case 'rejected':
+      case RequestStatus.REJECTED:
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
           <XCircle className="w-3 h-3 mr-1" />
           Reddedildi
@@ -193,7 +195,7 @@ function RegistrationRequestsContent() {
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="bg-white/10 text-white border-white/20 px-3 py-1">
               <Clock className="w-4 h-4 mr-1" />
-              {filteredRequests.filter(r => r.status === 'pending').length} Bekleyen İstek
+              {filteredRequests.filter(r => r.status === RequestStatus.PENDING).length} Bekleyen İstek
             </Badge>
           </div>
         </div>
@@ -265,7 +267,7 @@ function RegistrationRequestsContent() {
         ) : (
           <div className="grid gap-6">
             {filteredRequests.map((request) => (
-              <Card key={request._id.toString()} className="border-0 shadow-lg overflow-hidden">
+              <Card key={request.id} className="border-0 shadow-lg overflow-hidden">
                 <div className="h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
                 <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
@@ -293,8 +295,8 @@ function RegistrationRequestsContent() {
                       <div>
                         <p className="text-sm font-medium text-gray-500">İstenilen Rol</p>
                         <p className="mt-1 font-medium">
-                          {request.requestedRole === 'student' ? 'Öğrenci' : 
-                           request.requestedRole === 'tutor' ? 'Öğretmen' : 'Yönetici'}
+                          {request.requestedRole === UserRole.STUDENT ? 'Öğrenci' : 
+                           request.requestedRole === UserRole.TUTOR ? 'Öğretmen' : 'Yönetici'}
                         </p>
                       </div>
                       <div>
@@ -305,30 +307,28 @@ function RegistrationRequestsContent() {
                       </div>
                     </div>
                     
-                    {request.status === 'rejected' && request.rejectionReason && (
+                    {request.status === RequestStatus.REJECTED && request.rejectionReason && (
                       <div className="p-4 bg-red-50 rounded-lg border border-red-100">
                         <p className="text-sm font-medium text-red-800 mb-1">Red Nedeni</p>
                         <p className="text-red-600">{request.rejectionReason}</p>
                       </div>
                     )}
 
-                    {request.status === 'pending' && (
+                    {request.status === RequestStatus.PENDING && (
                       <div className="flex gap-3 mt-6">
                         <Button
-                          onClick={() => handleRequest(request._id.toString(), 'approve')}
-                          disabled={actionLoading}
+                          onClick={() => handleRequest(request.id, 'approve')}
                           className="bg-green-600 hover:bg-green-700 text-white"
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
                           Onayla
                         </Button>
                         <Button
-                          variant="destructive"
                           onClick={() => {
                             setSelectedRequest(request);
                             setRejectDialogOpen(true);
                           }}
-                          disabled={actionLoading}
+                          variant="destructive"
                         >
                           <XCircle className="w-4 h-4 mr-2" />
                           Reddet
@@ -377,7 +377,7 @@ function RegistrationRequestsContent() {
               variant="destructive"
               onClick={() => {
                 if (selectedRequest && rejectionReason) {
-                  handleRequest(selectedRequest._id.toString(), 'reject', rejectionReason);
+                  handleRequest(selectedRequest.id, 'reject', rejectionReason);
                 }
               }}
               disabled={!rejectionReason || actionLoading}

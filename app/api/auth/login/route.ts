@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User, { UserRole } from '@/models/User';
-import { UserJwtPayload } from '@/lib/types';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 import { signJWT, setJWTCookie } from '@/lib/server-auth';
-import { Document } from 'mongoose';
-
-interface UserDocument extends Document {
-  _id: string;
-  username: string;
-  email: string;
-  role: UserRole;
-  comparePassword: (password: string) => Promise<boolean>;
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { username, password } = body;
+    const { username, password } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json(
@@ -25,41 +14,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
+    // Find user by username
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        password: true,
+        role: true,
+        firstName: true,
+        lastName: true,
+        points: true
+      }
+    });
 
-    // Cast to custom interface with required properties
-    const user = await User.findOne({ username }) as UserDocument;
-
-    if (!user || !(await user.comparePassword(password))) {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Invalid username or password' },
+        { error: 'Invalid credentials' },
         { status: 401 }
       );
     }
-    
-    const payload: UserJwtPayload = {
-      id: user._id.toString(),
+
+    // Compare password
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      );
+    }
+
+    // Create JWT tokens
+    const { token, refreshToken } = await signJWT({
+      id: user.id,
       username: user.username,
       email: user.email,
-      role: user.role,
-    };
+      role: user.role
+    });
 
-    const { token, refreshToken } = await signJWT(payload);
-    
-    const response = NextResponse.json(
-      { 
-        message: 'Login successful',
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        }
-      },
-      { status: 200 }
-    );
+    // Create response
+    const response = NextResponse.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        points: user.points
+      }
+    });
 
-    return setJWTCookie(response, token, refreshToken);
+    // Set cookies
+    setJWTCookie(response, token, refreshToken);
+
+    return response;
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(

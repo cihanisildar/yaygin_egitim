@@ -1,10 +1,9 @@
 'use client';
 
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { IUser } from '@/models/User';
 
 type Tutor = {
   id: string;
@@ -23,6 +22,7 @@ export default function NewUserPage() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     password: '',
     confirmPassword: '',
     role: '',
@@ -31,6 +31,7 @@ export default function NewUserPage() {
   const [formErrors, setFormErrors] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     password: '',
     confirmPassword: '',
     role: '',
@@ -41,14 +42,14 @@ export default function NewUserPage() {
     const fetchTutors = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/users?role=tutor');
+        const response = await fetch(`/api/users?role=${UserRole.TUTOR}`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch tutors');
         }
         
         const data = await response.json();
-        setTutors(data.users.map((tutor: IUser) => ({
+        setTutors(data.users.map((tutor: Tutor) => ({
           id: tutor.id,
           username: tutor.username,
           firstName: tutor.firstName,
@@ -64,6 +65,14 @@ export default function NewUserPage() {
     fetchTutors();
   }, []);
 
+  useEffect(() => {
+    // Auto-generate username when first or last name changes
+    if (formData.firstName || formData.lastName) {
+      const generatedUsername = `${formData.firstName.toLowerCase()}_${formData.lastName.toLowerCase()}`.replace(/[^a-z0-9_]/g, '');
+      setFormData(prev => ({ ...prev, username: generatedUsername }));
+    }
+  }, [formData.firstName, formData.lastName]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -78,6 +87,7 @@ export default function NewUserPage() {
     const errors = {
       firstName: '',
       lastName: '',
+      username: '',
       password: '',
       confirmPassword: '',
       role: '',
@@ -93,6 +103,14 @@ export default function NewUserPage() {
     
     if (!formData.lastName.trim()) {
       errors.lastName = 'Soyad gereklidir';
+      isValid = false;
+    }
+
+    if (!formData.username.trim()) {
+      errors.username = 'Kullanıcı adı gereklidir';
+      isValid = false;
+    } else if (!/^[a-z0-9_]{3,20}$/.test(formData.username)) {
+      errors.username = 'Kullanıcı adı 3-20 karakter uzunluğunda olmalı ve sadece küçük harf, rakam ve alt çizgi içermelidir';
       isValid = false;
     }
     
@@ -134,10 +152,8 @@ export default function NewUserPage() {
       setCreating(true);
       setError('');
       
-      // Generate a username from first and last name
-      const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`;
-      // Generate an email from the username
-      const email = `${username}@ogrtakip.com`;
+      // Generate email from username
+      const email = `${formData.username}@ogrtakip.com`;
       
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -145,7 +161,7 @@ export default function NewUserPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username,
+          username: formData.username,
           email,
           password: formData.password,
           role: formData.role,
@@ -161,9 +177,10 @@ export default function NewUserPage() {
         throw new Error(errorData.error || 'Kullanıcı oluşturulurken bir hata oluştu');
       }
       
-      // Navigate back to users list
+      // Navigate back to users list and force a refresh
       router.push('/admin/users');
       router.refresh();
+      window.location.href = '/admin/users'; // Force a full page refresh
     } catch (err: unknown) {
       console.error('Create user error:', err);
       setError(err instanceof Error ? err.message : 'Kullanıcı oluşturulurken bir hata oluştu');
@@ -262,6 +279,38 @@ export default function NewUserPage() {
                   {formErrors.lastName}
                 </p>
               )}
+            </div>
+            
+            {/* Username */}
+            <div className="space-y-2">
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Kullanıcı Adı<span className="text-indigo-600 ml-0.5">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  className={`block w-full border ${formErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'} rounded-lg shadow-sm py-3 px-4 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150`}
+                  placeholder="Kullanıcı adını girin"
+                />
+              </div>
+              {formErrors.username && (
+                <p className="mt-1 text-sm text-red-600 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {formErrors.username}
+                </p>
+              )}
+              <p className="text-sm text-gray-500">
+                Bu kullanıcı adı ile giriş yapılacaktır. Otomatik olarak ad ve soyaddan oluşturulur ama değiştirilebilir.
+              </p>
             </div>
             
             {/* Password */}

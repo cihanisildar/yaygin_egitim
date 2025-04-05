@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User from '@/models/User';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { UserRole } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,20 +14,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
     // Get all students and sort them by points
-    const students = await User.find({ role: 'student' })
-      .select('username firstName lastName points')
-      .sort({ points: -1 });
+    const students = await prisma.user.findMany({
+      where: { 
+        role: UserRole.STUDENT 
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        points: true
+      },
+      orderBy: {
+        points: 'desc'
+      }
+    });
 
     // Add rank to each student
     const leaderboard = students.map((student, index) => ({
-      id: student._id,
-      username: student.username,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      points: student.points,
+      ...student,
       rank: index + 1
     }));
 

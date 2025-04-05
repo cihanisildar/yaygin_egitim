@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/mongodb';
-import User from '@/models/User';
+import { prisma } from '@/lib/prisma';
 import { getUserFromRequest, isAuthenticated, isTutor } from '@/lib/server-auth';
+import { UserRole } from '@prisma/client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,22 +14,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectToDatabase();
-
     // Get all students assigned to this tutor
-    const students = await User.find({ 
-      role: 'student',
-      tutorId: currentUser.id 
-    }).select('username firstName lastName');
+    const students = await prisma.user.findMany({ 
+      where: {
+        role: UserRole.STUDENT,
+        tutorId: currentUser.id 
+      },
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true
+      }
+    });
 
-    return NextResponse.json({ 
-      students: students.map(student => ({
-        id: student._id,
-        username: student.username,
-        firstName: student.firstName,
-        lastName: student.lastName
-      }))
-    }, { status: 200 });
+    return NextResponse.json({ students }, { status: 200 });
   } catch (error: Error | unknown) {
     console.error('Error fetching tutor students:', error);
     return NextResponse.json(

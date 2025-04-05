@@ -1,4 +1,4 @@
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import { JWTPayload } from 'jose';
 
 export interface UserJwtPayload extends JWTPayload {

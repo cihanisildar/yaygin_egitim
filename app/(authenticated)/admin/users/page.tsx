@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UserRole } from '@/models/User';
+import { UserRole } from '@prisma/client';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -43,14 +43,14 @@ export default function AdminUsersPage() {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        let url = '/api/users';
+        let url = '/api/users?limit=100';
         if (roleFilter) {
-          url += `?role=${roleFilter}`;
+          url += `&role=${encodeURIComponent(roleFilter)}`;
           if (searchQuery) {
-            url += `&q=${encodeURIComponent(searchQuery)}`;
+            url += `&search=${encodeURIComponent(searchQuery)}`;
           }
         } else if (searchQuery) {
-          url += `?q=${encodeURIComponent(searchQuery)}`;
+          url += `&search=${encodeURIComponent(searchQuery)}`;
         }
         
         const response = await fetch(url);
@@ -148,11 +148,11 @@ export default function AdminUsersPage() {
 
   const getRoleTranslation = (role: string) => {
     switch (role) {
-      case 'admin':
+      case UserRole.ADMIN:
         return 'Yönetici';
-      case 'tutor':
+      case UserRole.TUTOR:
         return 'Öğretmen';
-      case 'student':
+      case UserRole.STUDENT:
         return 'Öğrenci';
       default:
         return role;
