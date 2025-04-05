@@ -1,11 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { RequestStatus } from '@prisma/client';
 import { checkIsAdmin } from '@/lib/server-auth';
+import { RequestStatus } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET - Fetch all registration requests
 export async function GET(request: NextRequest) {
   try {
+    // During build time, return empty data
+    if (process.env.NODE_ENV === 'production' && !request.headers.get('cookie')) {
+      return NextResponse.json({ requests: [] }, { status: 200 });
+    }
+
     // Check if user is authenticated and is an admin
     const isUserAdmin = await checkIsAdmin(request);
     if (!isUserAdmin) {

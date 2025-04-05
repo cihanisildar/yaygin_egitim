@@ -4,7 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UserRole } from '@prisma/client';
 import { UserJwtPayload } from './types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is not set');
+}
 // Name of the auth cookie - specific to this project
 export const AUTH_COOKIE_NAME = 'ogrtakip-session';
 export const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
