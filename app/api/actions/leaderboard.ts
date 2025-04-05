@@ -3,12 +3,58 @@
 import { connectToDatabase } from '@/lib/mongodb';
 import User, { UserRole } from '@/models/User';
 import mongoose from 'mongoose';
+import { FilterQuery } from '@/types/common';
+
+interface LeaderboardQuery {
+  tutorId?: string;
+  timeRange?: string;
+  limit?: number;
+}
+
+interface MongoQuery {
+  tutorId?: string;
+  createdAt?: { $gte: Date };
+  role?: UserRole;
+}
+
+export async function getLeaderboardData(params: LeaderboardQuery = {}) {
+  const query: FilterQuery = {};
+  
+  if (params.tutorId) {
+    query.tutorId = params.tutorId;
+  }
+
+  if (params.timeRange) {
+    const now = new Date();
+    const startDate = new Date();
+
+    switch (params.timeRange) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+      default:
+        break;
+    }
+
+    query.createdAt = { $gte: startDate };
+  }
+
+  const limit = params.limit || 10;
+
+  return { query, limit };
+}
 
 export async function getLeaderboard(tutorId?: string, limit: number = 100) {
   try {
     await connectToDatabase();
 
-    let query: any = { role: UserRole.STUDENT };
+    const query: MongoQuery = { role: UserRole.STUDENT };
     
     // If tutorId is provided, filter students by tutor
     if (tutorId) {

@@ -1,47 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import Event from '@/models/Event';
-import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
+import { getServerSession } from '@/lib/server-auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession();
     
-    if (!isAuthenticated(currentUser)) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    if (!session || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectToDatabase();
+    const events = await Event.find().sort({ date: -1 });
 
-    const events = await Event.find({})
-      .sort({ startDateTime: 1 })
-      .populate('createdBy', 'username firstName lastName');
-
-    return NextResponse.json(
-      { 
-        events: events.map(event => ({
-          id: event._id,
-          title: event.title,
-          description: event.description,
-          startDateTime: event.startDateTime,
-          endDateTime: event.endDateTime,
-          location: event.location,
-          type: event.type,
-          capacity: event.capacity,
-          points: event.points,
-          tags: event.tags,
-          status: event.status,
-          createdBy: event.createdBy,
-          createdAt: event.createdAt,
-        }))
-      },
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      data: { events }
+    });
   } catch (error) {
-    console.error('Get events error:', error);
+    console.error('Error fetching events:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -51,66 +29,119 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const currentUser = await getUserFromRequest(request);
+    const session = await getServerSession();
     
-    if (!isAuthenticated(currentUser) || !(isAdmin(currentUser) || isTutor(currentUser))) {
-      return NextResponse.json(
-        { error: 'Unauthorized: Only admin or tutor can create events' },
-        { status: 403 }
-      );
+    if (!session || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { title, description, startDateTime, endDateTime, location, type, capacity, points, tags } = body;
-
-    if (!title || !description || !startDateTime || !endDateTime) {
+    const data = await request.json();
+    
+    if (!data.title || !data.date) {
       return NextResponse.json(
-        { error: 'Title, description, start date, and end date are required' },
+        { error: 'Title and date are required' },
         { status: 400 }
       );
     }
 
     await connectToDatabase();
-
-    const newEvent = new Event({
-      title,
-      description,
-      startDateTime: new Date(startDateTime),
-      endDateTime: new Date(endDateTime),
-      location: location || 'Online',
-      type: type || 'in-person',
-      capacity: capacity || 20,
-      points: points || 0,
-      tags: tags || [],
-      createdBy: currentUser.id,
-      status: 'upcoming'
+    const event = await Event.create({
+      ...data,
+      createdBy: session.user.id
     });
 
-    await newEvent.save();
-
-    return NextResponse.json(
-      {
-        message: 'Event created successfully',
-        event: {
-          id: newEvent._id,
-          title: newEvent.title,
-          description: newEvent.description,
-          startDateTime: newEvent.startDateTime,
-          endDateTime: newEvent.endDateTime,
-          location: newEvent.location,
-          type: newEvent.type,
-          capacity: newEvent.capacity,
-          points: newEvent.points,
-          tags: newEvent.tags,
-          status: newEvent.status,
-          createdBy: currentUser.id,
-          createdAt: newEvent.createdAt,
-        }
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      success: true,
+      data: { event }
+    });
   } catch (error) {
-    console.error('Create event error:', error);
+    console.error('Error creating event:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    
+    if (!session || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await request.json();
+    const { id, ...updateData } = data;
+
+    if (!id || !updateData.title || !updateData.date) {
+      return NextResponse.json(
+        { error: 'ID, title and date are required' },
+        { status: 400 }
+      );
+    }
+
+    await connectToDatabase();
+    const event = await Event.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedBy: session.user.id },
+      { new: true }
+    );
+
+    if (!event) {
+      return NextResponse.json(
+        { error: 'Event not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { event }
+    });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    
+    if (!session || !session.user.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Event ID is required' },
+        { status: 400 }
+      );
+    }
+
+    await connectToDatabase();
+    const event = await Event.findByIdAndDelete(id);
+
+    if (!event) {
+      return NextResponse.json(
+        { error: 'Event not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { event }
+    });
+  } catch (error) {
+    console.error('Error deleting event:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

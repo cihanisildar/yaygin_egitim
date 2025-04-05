@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User, { UserRole } from '@/models/User';
 import PointsTransaction, { TransactionType } from '@/models/PointsTransaction';
-import { getUserFromRequest, isAuthenticated, isAdmin, isStudent, isTutor } from '@/lib/server-auth';
+import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
     
     await connectToDatabase();
     
-    let query: any = {};
+    const query: { studentId?: string | { $in: mongoose.Types.ObjectId[] } } = {};
 
     // If admin, can see all transactions (optionally filtered by student)
     if (isAdmin(currentUser)) {

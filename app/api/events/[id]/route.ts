@@ -6,7 +6,7 @@ import { getUserFromRequest } from '@/lib/server-auth';
 // Get a specific event by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -83,7 +83,7 @@ export async function GET(
 // Update an event
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -95,7 +95,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -176,7 +176,7 @@ export async function PUT(
 // Delete an event
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -188,7 +188,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(

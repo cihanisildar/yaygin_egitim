@@ -5,7 +5,7 @@ import { isAdmin, isAuthenticated, isTutor, getUserFromRequest } from '@/lib/ser
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -17,11 +17,11 @@ export async function GET(
       );
     }
     
-    const userId = params.id;
+    const { id } = await params;
     
     await connectToDatabase();
 
-    const user = await User.findById(userId).select('-password');
+    const user = await User.findById(id).select('-password');
 
     if (!user) {
       return NextResponse.json(
@@ -34,7 +34,7 @@ export async function GET(
     // 1. User is looking at their own profile
     // 2. User is an admin
     // 3. User is a tutor looking at their own student
-    const isSelf = currentUser?.id === userId;
+    const isSelf = currentUser?.id === id;
     const isAdminUser = isAdmin(currentUser);
     const isTutorViewingStudent = 
       isTutor(currentUser) && 
@@ -76,7 +76,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -88,13 +88,13 @@ export async function PUT(
       );
     }
     
-    const userId = params.id;
+    const { id } = await params;
     const body = await request.json();
     const { username, email, role, tutorId, firstName, lastName, points } = body;
 
     await connectToDatabase();
 
-    const user = await User.findById(userId);
+    const user = await User.findById(id);
 
     if (!user) {
       return NextResponse.json(
@@ -106,7 +106,7 @@ export async function PUT(
     // Check for duplicate username or email if changing
     if ((username && username !== user.username) || (email && email !== user.email)) {
       const existingUser = await User.findOne({
-        _id: { $ne: userId },
+        _id: { $ne: id },
         $or: [
           ...(username ? [{ username }] : []),
           ...(email ? [{ email }] : []),
@@ -189,7 +189,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -201,10 +201,10 @@ export async function DELETE(
       );
     }
     
-    const userId = params.id;
+    const { id } = await params;
     
     // Prevent deleting yourself
-    if (currentUser?.id === userId) {
+    if (currentUser?.id === id) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
@@ -213,7 +213,7 @@ export async function DELETE(
 
     await connectToDatabase();
 
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {
       return NextResponse.json(

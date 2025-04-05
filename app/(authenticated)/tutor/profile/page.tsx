@@ -1,16 +1,16 @@
 "use client";
 
-import { Suspense } from "react";
-import { useState, useEffect } from "react";
-import { useAuth } from "@/app/contexts/AuthContext";
-import { FiUser, FiMail, FiPhone, FiEdit2, FiBookOpen, FiLayers, FiAward, FiCheckCircle } from "react-icons/fi";
-import Link from "next/link";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
 import { ProfileSkeleton } from "@/app/components/ui/ProfileSkeleton";
 import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { tr } from "date-fns/locale";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { FiAward, FiBookOpen, FiCheckCircle, FiEdit2, FiLayers, FiMail, FiPhone, FiUser } from "react-icons/fi";
 
 type TutorProfile = {
   id: string;
@@ -293,8 +293,8 @@ function ProfileContent() {
             <div className="h-32 bg-gradient-to-r from-indigo-500 to-purple-600"></div>
             <div className="absolute -bottom-16 left-0 w-full flex justify-center">
               <div className="ring-4 ring-white rounded-full overflow-hidden h-32 w-32">
-                <img 
-                  src={profile.profileImage} 
+                <Image
+                  src={profile.profileImage || '/default-profile-image.jpg'} 
                   alt={`${profile.firstName} ${profile.lastName}`}
                   className="h-full w-full object-cover"
                 />

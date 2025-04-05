@@ -1,32 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Calendar, AlertCircle } from 'lucide-react';
-import { HeaderSkeleton, SearchFilterSkeleton, EventCardSkeleton } from '../../../components/ui/skeleton-shimmer';
+import { useCallback, useEffect, useState } from 'react';
+import { EventCardSkeleton, HeaderSkeleton, SearchFilterSkeleton } from '../../../components/ui/skeleton-shimmer';
+import { Event, ApiResponse, ErrorResponse } from '@/types/common';
+import { useToast } from '@/components/ui/use-toast';
 
-type Event = {
-  id: string;
+interface EventFormData {
   title: string;
   description: string;
   date: string;
-  createdBy: {
-    id: string;
-    username: string;
-    firstName?: string;
-    lastName?: string;
-  };
-  createdAt: string;
-};
+}
+
+interface EventFormErrors {
+  title?: string;
+  description?: string;
+  date?: string;
+}
 
 export default function AdminEventsPage() {
-  const router = useRouter();
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,20 +28,16 @@ export default function AdminEventsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [dateFilter, setDateFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [eventForm, setEventForm] = useState({
+  const [eventForm, setEventForm] = useState<EventFormData>({
     title: '',
     description: '',
     date: ''
   });
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
-  const [formErrors, setFormErrors] = useState({
-    title: '',
-    description: '',
-    date: ''
-  });
+  const [formErrors, setFormErrors] = useState<EventFormErrors>({});
   const [formSubmitting, setFormSubmitting] = useState(false);
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -64,25 +54,36 @@ export default function AdminEventsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch events');
+        const errorData: ErrorResponse = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch events');
       }
 
-      const data = await response.json();
-      setEvents(data.events || []);
-      setFilteredEvents(data.events || []);
-    } catch (err: any) {
+      const data: ApiResponse<{ events: Event[] }> = await response.json();
+      
+      if (!data.success || !data.data) {
+        throw new Error('Invalid response format');
+      }
+      
+      setEvents(data.data.events);
+      setFilteredEvents(data.data.events);
+    } catch (error) {
+      const err = error as Error;
       setError(err.message);
-      console.error('Error fetching events:', err);
+      toast({
+        title: 'Error',
+        description: err.message,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, isAdmin, toast]);
 
   useEffect(() => {
     if (user) {
       fetchEvents();
     }
-  }, [user]);
+  }, [user, fetchEvents]);
 
   useEffect(() => {
     // Filter events based on search query and date filter
@@ -97,7 +98,6 @@ export default function AdminEventsPage() {
     }
     
     if (dateFilter) {
-      const today = new Date();
       const filterDate = new Date(dateFilter);
       
       filtered = filtered.filter(event => {
@@ -137,10 +137,19 @@ export default function AdminEventsPage() {
       setFilteredEvents(filteredEvents.filter(event => event.id !== eventId));
       
       // Show success message
-      alert(`"${title}" etkinliği başarıyla silindi`);
-    } catch (err: any) {
+      toast({
+        title: 'Success',
+        description: `"${title}" etkinliği başarıyla silindi`,
+        variant: 'default',
+      });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : 'Etkinlik silinirken bir hata oluştu';
       console.error('Delete event error:', err);
-      alert(err.message || 'Etkinlik silinirken bir hata oluştu');
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -151,11 +160,7 @@ export default function AdminEventsPage() {
       description: '',
       date: new Date().toISOString().split('T')[0]
     });
-    setFormErrors({
-      title: '',
-      description: '',
-      date: ''
-    });
+    setFormErrors({});
     setIsModalOpen(true);
   };
 
@@ -166,11 +171,7 @@ export default function AdminEventsPage() {
       description: event.description,
       date: new Date(event.date).toISOString().split('T')[0]
     });
-    setFormErrors({
-      title: '',
-      description: '',
-      date: ''
-    });
+    setFormErrors({});
     setIsModalOpen(true);
   };
 
@@ -256,10 +257,19 @@ export default function AdminEventsPage() {
       }
       
       setIsModalOpen(false);
-      alert(currentEventId ? 'Etkinlik güncellendi' : 'Etkinlik oluşturuldu');
-    } catch (err: any) {
+      toast({
+        title: 'Success',
+        description: currentEventId ? 'Etkinlik güncellendi' : 'Etkinlik oluşturuldu',
+        variant: 'default',
+      });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : 'Etkinlik kaydedilirken bir hata oluştu';
       console.error('Save event error:', err);
-      alert(err.message || 'Etkinlik kaydedilirken bir hata oluştu');
+      toast({
+        title: 'Error',
+        description: error,
+        variant: 'destructive',
+      });
     } finally {
       setFormSubmitting(false);
     }
@@ -427,7 +437,7 @@ export default function AdminEventsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatDate(event.date)}</div>
+                      <div className="text-sm font-medium text-gray-900">{formatDate(new Date(event.date).toISOString())}</div>
                       <div className="text-xs text-gray-500">{new Date(event.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">

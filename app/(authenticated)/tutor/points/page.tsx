@@ -1,7 +1,7 @@
 "use client";
 
 import { PointsPageSkeleton } from "@/app/components/ui/PointsPageSkeleton";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,14 +9,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { FiAlertCircle, FiAward, FiClock, FiSearch } from "react-icons/fi";
-import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Types
 type Student = {
@@ -39,6 +38,16 @@ type Transaction = {
   type: string;
   reason: string;
   createdAt: string;
+};
+
+// Add new type for API response
+type UserApiResponse = {
+  _id?: string;
+  id?: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  points?: number;
 };
 
 // Static Header Component
@@ -173,7 +182,6 @@ function LoadingPoints() {
 
 // Dynamic Points Management Component
 function PointsManagement() {
-  const { user } = useAuth();
   const router = useRouter();
   
   const [students, setStudents] = useState<Student[]>([]);
@@ -196,8 +204,8 @@ function PointsManagement() {
         const studentsData = await studentsRes.json();
         
         if (studentsData.users) {
-          setStudents(studentsData.users.map((user: any) => ({
-            id: user._id || user.id,
+          setStudents(studentsData.users.map((user: UserApiResponse) => ({
+            id: user._id || user.id || '',
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,

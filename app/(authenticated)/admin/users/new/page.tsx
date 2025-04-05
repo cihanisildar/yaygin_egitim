@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { UserRole } from '@/models/User';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { IUser } from '@/models/User';
 
 type Tutor = {
   id: string;
@@ -47,13 +48,13 @@ export default function NewUserPage() {
         }
         
         const data = await response.json();
-        setTutors(data.users.map((tutor: any) => ({
+        setTutors(data.users.map((tutor: IUser) => ({
           id: tutor.id,
           username: tutor.username,
           firstName: tutor.firstName,
           lastName: tutor.lastName,
         })));
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Error fetching tutors:', err);
       } finally {
         setLoading(false);
@@ -163,9 +164,9 @@ export default function NewUserPage() {
       // Navigate back to users list
       router.push('/admin/users');
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Create user error:', err);
-      setError(err.message || 'Kullanıcı oluşturulurken bir hata oluştu');
+      setError(err instanceof Error ? err.message : 'Kullanıcı oluşturulurken bir hata oluştu');
     } finally {
       setCreating(false);
     }

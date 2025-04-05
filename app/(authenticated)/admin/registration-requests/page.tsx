@@ -1,19 +1,18 @@
 'use client';
 
-import { Suspense } from 'react';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { IRegistrationRequest } from '@/models/RegistrationRequest';
-import { Types } from 'mongoose';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { UserPlus, AlertCircle, CheckCircle2, XCircle, Clock, Search, Filter } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { HeaderSkeleton, RequestCardSkeleton, SearchFilterSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { useAuth } from '@/app/contexts/AuthContext';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { IRegistrationRequest } from '@/models/RegistrationRequest';
+import { AlertCircle, CheckCircle2, Clock, Filter, Search, UserPlus, XCircle } from 'lucide-react';
+import { Types } from 'mongoose';
+import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 type RegistrationRequestWithId = IRegistrationRequest & { _id: Types.ObjectId };
 
 // Loading component for the requests list
@@ -46,7 +45,7 @@ function RegistrationRequestsContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -80,19 +79,20 @@ function RegistrationRequestsContent() {
 
       setRequests(data.requests);
       setFilteredRequests(data.requests);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(error);
       console.error('Error fetching registration requests:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [router, user, isAdmin]);
 
   useEffect(() => {
     if (user) {
       fetchRequests();
     }
-  }, [user]);
+  }, [user, fetchRequests]);
 
   useEffect(() => {
     let filtered = [...requests];
@@ -146,8 +146,9 @@ function RegistrationRequestsContent() {
       setRejectionReason('');
 
       await fetchRequests();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(error);
       console.error(`Error ${action}ing request:`, err);
     } finally {
       setActionLoading(false);

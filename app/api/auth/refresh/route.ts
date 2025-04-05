@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { refreshAccessToken, setJWTCookie } from '@/lib/server-auth';
+import { verifyRefreshToken, setJWTCookie, signJWT } from '@/lib/server-auth';
 
 const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
 
@@ -14,25 +14,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await refreshAccessToken(refreshToken);
+    const user = await verifyRefreshToken(refreshToken);
 
-    if (!result) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid or expired refresh token' },
         { status: 401 }
       );
     }
 
-    const { token, user } = result;
+    // Generate new access token
+    const { token } = await signJWT({
+      id: user.user.id,
+      username: user.user.username,
+      email: user.user.email,
+      role: user.user.role
+    });
 
     const response = NextResponse.json(
       {
         message: 'Token refreshed successfully',
         user: {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
+          id: user.user.id,
+          username: user.user.username,
+          email: user.user.email,
+          role: user.user.role,
         }
       },
       { status: 200 }

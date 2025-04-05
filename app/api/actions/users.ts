@@ -29,6 +29,14 @@ export async function getTutorStudents(tutorId: string) {
   }
 }
 
+interface StudentQuery {
+  role: UserRole;
+  $or?: Array<{
+    [key: string]: { $regex: string, $options: string }
+  }>;
+  tutorId?: string;
+}
+
 /**
  * Gets all students with pagination and filtering options
  */
@@ -48,7 +56,7 @@ export async function getStudents(options: {
     
     await connectToDatabase();
     
-    let query: any = { role: UserRole.STUDENT };
+    const query: StudentQuery = { role: UserRole.STUDENT };
     
     // Add search filter if provided
     if (search) {

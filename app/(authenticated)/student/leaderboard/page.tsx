@@ -1,23 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Medal, Trophy, Award, Search, ArrowUpDown, User, Filter, Crown, AlertCircle } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import Link from 'next/link';
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { AlertCircle, Award, Medal, Trophy } from "lucide-react";
+import Link from 'next/link';
+import { useEffect, useState } from "react";
 
 interface LeaderboardEntry {
   id: string;
@@ -103,8 +101,8 @@ export default function StudentLeaderboardPage() {
       const data = await response.json();
       setLeaderboard(data.leaderboard || []);
       setUserRank(data.userRank || null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       console.error('Error fetching leaderboard:', err);
     } finally {
       setLoading(false);

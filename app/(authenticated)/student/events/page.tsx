@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Calendar, Clock, MapPin, Users, Search, Filter, ChevronRight, Tag } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -14,8 +11,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, ChevronRight, Clock, MapPin, Search, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 type Event = {
   id: string;

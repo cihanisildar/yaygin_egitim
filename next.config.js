@@ -1,8 +1,37 @@
 /** @type {import('next').NextConfig} */
+const webpack = require('webpack');
+
 const nextConfig = {
   /* config options here */
-  serverExternalPackages: ["mongoose"],
-  webpack: (config) => {
+  experimental: {
+    serverComponentsExternalPackages: ["mongoose", "mongodb"]
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Don't attempt to import these server-side modules on the client
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        net: false,
+        tls: false,
+        fs: false,
+        dns: false,
+        child_process: false,
+        os: false,
+        path: false,
+        stream: require.resolve('stream-browserify'),
+        crypto: require.resolve('crypto-browserify'),
+        buffer: require.resolve('buffer/'),
+      };
+
+      // Add polyfill plugins
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          Buffer: ['buffer', 'Buffer'],
+          process: 'process/browser',
+        }),
+      );
+    }
+
     return config;
   },
   images: {

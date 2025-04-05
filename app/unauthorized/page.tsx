@@ -1,12 +1,10 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 import Link from 'next/link';
 
 export default function UnauthorizedPage() {
-  const { user, isAdmin, isTutor, isStudent } = useAuth();
-  const router = useRouter();
+  const {  isAdmin, isTutor, isStudent } = useAuth();
 
   // Determine where to send the user based on their role
   const getDashboardLink = () => {

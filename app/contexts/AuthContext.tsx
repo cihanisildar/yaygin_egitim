@@ -5,6 +5,7 @@ import {
   useState,
   useEffect,
   ReactNode,
+  useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
 import { UserRole } from "@/models/User";
@@ -83,7 +84,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const currentPath = window.location.pathname;
     console.log('Checking auth for path:', currentPath);
     
@@ -135,7 +136,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     const currentPath = window.location.pathname;
@@ -147,7 +148,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     } else {
       setLoading(false);
     }
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -163,7 +164,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         clearInterval(interval);
       }
     };
-  }, [user]);
+  }, [user, checkAuth]);
 
   const login = async (username: string, password: string) => {
     try {

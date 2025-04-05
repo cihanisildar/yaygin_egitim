@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
 // Get a specific request by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -23,11 +23,11 @@ export async function GET(
       );
     }
     
-    const requestId = params.id;
+    const { id } = await params;
     
     await connectToDatabase();
     
-    const itemRequest = await ItemRequest.findById(requestId)
+    const itemRequest = await ItemRequest.findById(id)
       .populate('studentId', 'username firstName lastName points')
       .populate('tutorId', 'username firstName lastName')
       .populate('itemId');
@@ -78,7 +78,7 @@ export async function GET(
 // Update a request (approve or reject)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -90,7 +90,7 @@ export async function PUT(
       );
     }
     
-    const requestId = params.id;
+    const { id } = await params;
     const body = await request.json();
     const { status, note } = body;
     
@@ -117,7 +117,7 @@ export async function PUT(
     
     try {
       // Get the request with its related data
-      const itemRequest = await ItemRequest.findById(requestId).session(session);
+      const itemRequest = await ItemRequest.findById(id).session(session);
       
       if (!itemRequest) {
         await session.abortTransaction();

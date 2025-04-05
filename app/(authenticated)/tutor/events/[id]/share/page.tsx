@@ -1,53 +1,50 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  ChevronLeft, 
-  Share2, 
-  Link2, 
-  Copy, 
-  Mail, 
-  CalendarDays, 
-  QrCode, 
-  Download, 
-  Calendar, 
-  MessageSquare, 
-  Clock, 
-  Facebook, 
-  Twitter, 
-  Linkedin, 
-  Instagram, 
-  Check, 
-  Settings2
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Calendar,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  Clock,
+  Copy,
+  Download,
+  Facebook,
+  Link2,
+  Linkedin,
+  Mail,
+  MessageSquare,
+  QrCode,
+  Settings2,
+  Share2,
+  Twitter
+} from 'lucide-react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 type Event = {
   id: string;
@@ -60,6 +57,14 @@ type Event = {
   status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
   capacity: number;
   enrolledStudents: number;
+};
+
+type SocialPlatform = {
+  name: string;
+  icon: React.ReactNode;
+  color: string;
+  textColor: string;
+  link: (url: string, title: string) => string;
 };
 
 const socialPlatforms = [
@@ -98,7 +103,6 @@ const socialPlatforms = [
 ];
 
 export default function ShareEvent() {
-  const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   const { toast } = useToast();
@@ -112,7 +116,6 @@ export default function ShareEvent() {
   const [emailBody, setEmailBody] = useState('');
   const [emailRecipients, setEmailRecipients] = useState('');
   const [reminderOption, setReminderOption] = useState('google');
-  const [shareAccessOption, setShareAccessOption] = useState('link');
   const [shareSettings, setShareSettings] = useState({
     requireLogin: false,
     trackClicks: true,
@@ -252,7 +255,7 @@ Saygılarımızla,
     });
   };
 
-  const handleShareSocialMedia = (platform: any) => {
+  const handleShareSocialMedia = (platform: SocialPlatform) => {
     if (!event) return;
     
     const shareUrl = platform.link(shareableLink, event.title);

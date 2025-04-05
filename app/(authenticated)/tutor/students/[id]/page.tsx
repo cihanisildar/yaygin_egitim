@@ -1,31 +1,28 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/app/contexts/AuthContext';
-import Link from 'next/link';
-import { 
-  GraduationCap, 
-  User, 
-  Trophy, 
-  Clock, 
-  Calendar, 
-  Mail, 
-  ChevronLeft, 
-  Award, 
-  TrendingUp, 
-  FileText, 
-  AlertTriangle,
-  Activity,
-  ArrowUpRight,
-  BookOpen
-} from 'lucide-react';
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowUpRight,
+  Award,
+  BookOpen,
+  Calendar,
+  ChevronLeft,
+  FileText,
+  Mail,
+  TrendingUp,
+  Trophy,
+  User
+} from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useCallback } from 'react';
 
 type Student = {
   id: string;
@@ -54,7 +51,7 @@ type PointHistory = {
 };
 
 export default function StudentDetailPage() {
-  const { user } = useAuth();
+  const { } = useAuth();
   const router = useRouter();
   const params = useParams();
   const [student, setStudent] = useState<Student | null>(null);
@@ -65,11 +62,7 @@ export default function StudentDetailPage() {
   
   const studentId = params.id as string;
 
-  useEffect(() => {
-    fetchStudentDetails();
-  }, [studentId]);
-
-  const fetchStudentDetails = async () => {
+  const fetchStudentDetails = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -107,7 +100,11 @@ export default function StudentDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [studentId]);
+
+  useEffect(() => {
+    fetchStudentDetails();
+  }, [fetchStudentDetails]);
 
   const getFullName = (person: { firstName?: string; lastName?: string; username: string }) => {
     if (person.firstName && person.lastName) {

@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { useAuth } from '@/app/contexts/AuthContext';
-import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Users, Calendar, ShoppingBag, AlertCircle, ChevronRight, Home, User, UserPlus, BarChart2, Trophy } from "lucide-react";
-import { HeaderSkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { AlertCircle, Calendar, ChevronRight, ShoppingBag, Trophy, User, UserPlus, Users } from "lucide-react";
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 type Stats = {
   totalUsers: number;
@@ -16,6 +16,19 @@ type Stats = {
   totalStoreItems: number;
   pendingRequests: number;
 };
+
+interface User {
+  id: string;
+  role: 'student' | 'tutor' | 'admin';
+  name: string;
+  email: string;
+}
+
+interface RegistrationRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  userId: string;
+}
 
 export default function AdminDashboard() {
   const { isAdmin } = useAuth();
@@ -44,8 +57,8 @@ export default function AdminDashboard() {
           const usersData = await usersRes.json();
           if (usersData?.users) {
             defaultStats.totalUsers = usersData.users.length;
-            defaultStats.totalStudents = usersData.users.filter((u: any) => u.role === 'student').length;
-            defaultStats.totalTutors = usersData.users.filter((u: any) => u.role === 'tutor').length;
+            defaultStats.totalStudents = usersData.users.filter((u: User) => u.role === 'student').length;
+            defaultStats.totalTutors = usersData.users.filter((u: User) => u.role === 'tutor').length;
           }
         } catch (err) {
           console.error('Error fetching users:', err);
@@ -78,7 +91,7 @@ export default function AdminDashboard() {
           const requestsRes = await fetch('/api/admin/registration-requests');
           const requestsData = await requestsRes.json();
           if (requestsData?.requests) {
-            defaultStats.pendingRequests = requestsData.requests.filter((req: any) => req.status === 'pending').length;
+            defaultStats.pendingRequests = requestsData.requests.filter((req: RegistrationRequest) => req.status === 'pending').length;
           }
         } catch (err) {
           console.error('Error fetching registration requests:', err);

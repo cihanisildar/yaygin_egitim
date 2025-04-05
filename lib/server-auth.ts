@@ -1,17 +1,17 @@
-import { SignJWT, jwtVerify } from 'jose';
+import { SignJWT, jwtVerify, JWTPayload } from 'jose';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { UserRole } from '@/models/User';
-import { UserJwtPayload } from './auth';
+import { UserJwtPayload } from './types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 // Name of the auth cookie - specific to this project
-const AUTH_COOKIE_NAME = 'ogrtakip-session';
+export const AUTH_COOKIE_NAME = 'ogrtakip-session';
 // Token expiration time in seconds (24 hours)
 const TOKEN_EXPIRATION_SECONDS = 24 * 60 * 60;
 // Refresh token expiration time in seconds (7 days)
 const REFRESH_TOKEN_EXPIRATION_SECONDS = 7 * 24 * 60 * 60;
-const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
+export const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
 
 // Add authentication utility functions
 export function isAuthenticated(user: UserJwtPayload | null) {
@@ -35,7 +35,7 @@ export async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
     return payload as unknown as UserJwtPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -43,13 +43,13 @@ export async function verifyJWT(token: string): Promise<UserJwtPayload | null> {
 export async function signJWT(payload: UserJwtPayload) {
   const secret = new TextEncoder().encode(JWT_SECRET);
   
-  const token = await new SignJWT(payload)
+  const token = await new SignJWT(payload as unknown as JWTPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${TOKEN_EXPIRATION_SECONDS}s`)
     .sign(secret);
   
-  const refreshToken = await new SignJWT({ ...payload, type: 'refresh' })
+  const refreshToken = await new SignJWT({ ...payload, type: 'refresh' } as unknown as JWTPayload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime(`${REFRESH_TOKEN_EXPIRATION_SECONDS}s`)
@@ -107,7 +107,7 @@ export async function getUserFromRequest(request: NextRequest) {
   // If access token is invalid or missing, try refresh token
   if (refreshToken) {
     console.log('Attempting refresh with refresh token');
-    const result = await refreshAccessToken(refreshToken);
+    const result = await verifyRefreshToken(refreshToken);
     if (result) {
       console.log('Refresh successful, new token generated');
       // Create a new response
@@ -163,7 +163,7 @@ export async function getServerSession() {
   
   // If access token is invalid or missing, try refresh token
   if (refreshToken) {
-    const result = await refreshAccessToken(refreshToken);
+    const result = await verifyRefreshToken(refreshToken);
     if (result) {
       // Create a new response
       const response = NextResponse.next();
@@ -185,7 +185,7 @@ export async function getServerSession() {
   return null;
 }
 
-export async function refreshAccessToken(refreshToken: string): Promise<{ token: string; user: UserJwtPayload } | null> {
+export async function verifyRefreshToken(refreshToken: string): Promise<{ token: string; user: UserJwtPayload } | null> {
   try {
     const secret = new TextEncoder().encode(JWT_SECRET);
     const { payload } = await jwtVerify(refreshToken, secret);
@@ -194,21 +194,11 @@ export async function refreshAccessToken(refreshToken: string): Promise<{ token:
       return null;
     }
     
-    const user: UserJwtPayload = {
-      id: payload.id as string,
-      username: payload.username as string,
-      email: payload.email as string,
-      role: payload.role as UserRole,
-    };
+    const user = payload as unknown as UserJwtPayload;
+    const { token } = await signJWT(user);
     
-    const newToken = await new SignJWT(user)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(`${TOKEN_EXPIRATION_SECONDS}s`)
-      .sign(secret);
-    
-    return { token: newToken, user };
-  } catch (error) {
+    return { token, user };
+  } catch {
     return null;
   }
 }
@@ -217,7 +207,7 @@ export async function checkIsAdmin(request: NextRequest) {
   try {
     const user = await getUserFromRequest(request);
     return user?.role === 'admin';
-  } catch (error) {
+  } catch {
     return false;
   }
 } 

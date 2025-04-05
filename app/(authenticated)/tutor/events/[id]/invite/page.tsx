@@ -1,32 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  ChevronLeft, 
-  Search, 
-  UserPlus, 
-  Users, 
-  Mail, 
-  Check, 
-  X, 
-  CheckCircle,
-  User,
-  Filter,
-  Link2,
-  Copy,
-  RefreshCw
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -34,16 +22,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useParams } from 'next/navigation';
+import {
+  ChevronLeft,
+  Copy,
+  Filter,
+  Link2,
+  Mail,
+  RefreshCw,
+  Search,
+  User,
+  UserPlus,
+  Users,
+  X
+} from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 // Student type definition
 type Student = {
@@ -54,6 +50,18 @@ type Student = {
   class?: string;
   grade?: string;
   isSelected?: boolean;
+};
+
+// API Student type definition
+type APIStudent = {
+  _id?: string;
+  id?: string;
+  firstName: string;
+  lastName: string;
+  studentId: string;
+  email: string;
+  class?: string;
+  grade?: string;
 };
 
 // Event type definition
@@ -127,7 +135,7 @@ export default function InviteStudents() {
         }
 
         const studentsData = await studentsResponse.json();
-        const formattedStudents = studentsData.students.map((student: any) => ({
+        const formattedStudents = studentsData.students.map((student: APIStudent) => ({
           id: student._id || student.id,
           name: `${student.firstName} ${student.lastName}`,
           studentId: student.studentId,

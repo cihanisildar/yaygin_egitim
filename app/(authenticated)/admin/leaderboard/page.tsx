@@ -1,16 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { HeaderSkeleton, LeaderboardEntrySkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { useAuth } from '@/app/contexts/AuthContext';
-import { Trophy, Award, Medal, Crown, BarChart2, Filter, User, Users, Search, Download, ArrowUpDown } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { HeaderSkeleton, StatsCardSkeleton, LeaderboardEntrySkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ArrowUpDown, Award, BarChart2, Crown, Download, Filter, Medal, Search, Trophy, User, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface LeaderboardEntry {
   rank: number;

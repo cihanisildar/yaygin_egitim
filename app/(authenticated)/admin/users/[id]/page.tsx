@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { UserRole } from "@/models/User";
-import PointsManager from "@/app/components/PointsManager";
 import PointsUpdateDialog from "@/app/components/PointsUpdateDialog";
-import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { UserRole } from "@/models/User";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type User = {
   id: string;
@@ -95,7 +93,12 @@ export default function EditUserPage() {
 
         const data = await response.json();
         setTutors(
-          data.users.map((tutor: any) => ({
+          data.users.map((tutor: {
+            id: string;
+            username: string;
+            firstName?: string;
+            lastName?: string;
+          }) => ({
             id: tutor.id,
             username: tutor.username,
             firstName: tutor.firstName,
@@ -205,9 +208,9 @@ export default function EditUserPage() {
       // Navigate back to users list
       router.push("/admin/users");
       router.refresh();
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error("Kullanıcı güncelleme hatası:", err);
-      setError(err.message || "Kullanıcı güncellenirken bir hata oluştu");
+      setError(err instanceof Error ? err.message : "Kullanıcı güncellenirken bir hata oluştu");
     } finally {
       setSaving(false);
     }

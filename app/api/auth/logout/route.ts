@@ -1,44 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-
-// Name of the auth cookie - specific to this project
-const AUTH_COOKIE_NAME = 'ogrtakip-session';
-const REFRESH_TOKEN_COOKIE_NAME = 'ogrtakip-refresh';
+import { NextResponse } from 'next/server';
+import { AUTH_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME } from '@/lib/server-auth';
 
 export async function POST() {
-  try {
-    const response = NextResponse.json(
-      { message: 'Logged out successfully' },
-      { status: 200 }
-    );
-    
-    // Clear the auth cookie
-    response.cookies.set({
-      name: AUTH_COOKIE_NAME,
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      expires: new Date(0), // Set expiration in the past to delete the cookie
-      sameSite: 'strict',
-      path: '/',
-    });
+  const response = NextResponse.json({ success: true });
 
-    // Clear the refresh token cookie
-    response.cookies.set({
-      name: REFRESH_TOKEN_COOKIE_NAME,
-      value: '',
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      expires: new Date(0), // Set expiration in the past to delete the cookie
-      sameSite: 'strict',
-      path: '/',
-    });
-    
-    return response;
-  } catch (error) {
-    console.error('Logout error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
+  // Clear auth cookies
+  response.cookies.set({
+    name: AUTH_COOKIE_NAME,
+    value: '',
+    expires: new Date(0),
+    path: '/',
+  });
+
+  response.cookies.set({
+    name: REFRESH_TOKEN_COOKIE_NAME,
+    value: '',
+    expires: new Date(0),
+    path: '/',
+  });
+
+  return response;
 } 

@@ -4,6 +4,9 @@ import { useAuth } from '@/app/contexts/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 // Import icons
+import { HeaderSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   AlertTriangle,
   Award,
@@ -17,9 +20,6 @@ import {
   X,
   XCircle
 } from 'lucide-react';
-import { HeaderSkeleton } from '@/app/components/ui/skeleton-shimmer';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 type ItemRequest = {
   id: string;
@@ -205,9 +205,9 @@ export default function TutorRequests() {
         setRequests(requests.filter(req => req.id !== requestId));
       }
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('İsteği işleme hatası:', err);
-      setError(err.message || 'İstek işlenemedi. Lütfen tekrar deneyin.');
+      setError(err instanceof Error ? err.message : 'İstek işlenemedi. Lütfen tekrar deneyin.');
     } finally {
       setProcessingId(null);
       closeModal();

@@ -4,6 +4,17 @@ import User, { UserRole } from '@/models/User';
 import { getUserFromRequest, isAuthenticated, isAdmin, isTutor } from '@/lib/server-auth';
 import mongoose from 'mongoose';
 
+interface UserQuery {
+  role?: UserRole;
+  tutorId?: mongoose.Types.ObjectId | string;
+  $or?: Array<{
+    [key in 'username' | 'email' | 'firstName' | 'lastName']?: { 
+      $regex: string;
+      $options: string;
+    };
+  }>;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -24,11 +35,11 @@ export async function GET(request: NextRequest) {
     
     await connectToDatabase();
 
-    let query: any = {};
+    let query: UserQuery = {};
     
     // Filter by role if provided
     if (role && Object.values(UserRole).includes(role as UserRole)) {
-      query.role = role;
+      query.role = role as UserRole;
     }
     
     // Filter by tutorId if provided
@@ -98,7 +109,7 @@ export async function GET(request: NextRequest) {
       limit,
       totalPages: Math.ceil(totalCount / limit)
     }, { status: 200 });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get users error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

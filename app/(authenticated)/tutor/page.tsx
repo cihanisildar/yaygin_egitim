@@ -1,6 +1,5 @@
 "use client";
 
-import { Suspense } from "react";
 import { useAuth } from "@/app/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -36,27 +35,55 @@ interface RecentTransaction {
   };
 }
 
+interface StudentsResponse {
+  users: Array<{ id: string; firstName: string; username: string }>;
+}
+
+interface EventsResponse {
+  events: Array<{ id: string; title: string; date: string }>;
+}
+
+interface RequestsResponse {
+  requests: Array<{ id: string; status: string }>;
+}
+
+interface PointsTransaction {
+  id: string;
+  type: "award" | "deduct";
+  points: number;
+  reason: string;
+  createdAt: string;
+  student: {
+    firstName: string;
+    username: string;
+  };
+}
+
+interface PointsResponse {
+  transactions: PointsTransaction[];
+}
+
 async function fetchDashboardData() {
         // Get students
         const studentsRes = await fetch("/api/users?role=student");
-        const studentsData = await studentsRes.json();
+        const studentsData = await studentsRes.json() as StudentsResponse;
 
         // Get events created by this tutor
         const eventsRes = await fetch("/api/events");
-        const eventsData = await eventsRes.json();
+        const eventsData = await eventsRes.json() as EventsResponse;
 
         // Get pending requests
         const requestsRes = await fetch("/api/requests?status=pending");
-        const requestsData = await requestsRes.json();
+        const requestsData = await requestsRes.json() as RequestsResponse;
 
         // Get recent points transactions
         const transactionsRes = await fetch("/api/points");
-        const transactionsData = await transactionsRes.json();
+        const transactionsData = await transactionsRes.json() as PointsResponse;
 
         // Calculate total points awarded
         const totalPoints =
           transactionsData.transactions?.reduce(
-            (total: number, transaction: any) => {
+            (total: number, transaction: PointsTransaction) => {
               return transaction.type === "award"
                 ? total + transaction.points
                 : total;
@@ -74,7 +101,7 @@ async function fetchDashboardData() {
     recentTransactions: transactionsData.transactions
             ? transactionsData.transactions
                 .sort(
-                  (a: any, b: any) =>
+                  (a: PointsTransaction, b: PointsTransaction) =>
                     new Date(b.createdAt).getTime() -
                     new Date(a.createdAt).getTime()
                 )

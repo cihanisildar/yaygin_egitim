@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import RegistrationRequest from '@/models/RegistrationRequest';
+import RegistrationRequest, { RequestStatus } from '@/models/RegistrationRequest';
 import User from '@/models/User';
 import { checkIsAdmin } from '@/lib/server-auth';
 
@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
     const requests = await RegistrationRequest.find({}).sort({ createdAt: -1 });
     
     return NextResponse.json({ requests }, { status: 200 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching registration requests:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
 
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
       await newUser.save();
       
       // Update the registration request status
-      registrationRequest.status = 'approved';
+      registrationRequest.status = RequestStatus.APPROVED;
       await registrationRequest.save();
       
       return NextResponse.json({ 
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     } else {
       // Reject the registration request
-      registrationRequest.status = 'rejected';
+      registrationRequest.status = RequestStatus.REJECTED;
       registrationRequest.rejectionReason = rejectionReason;
       await registrationRequest.save();
       
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
         message: 'Registration request rejected successfully'
       }, { status: 200 });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error processing registration request:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 } 

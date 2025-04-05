@@ -1,17 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { 
-  Card, CardContent, CardDescription, CardHeader, CardTitle 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FiArrowLeft, FiSearch, FiFilter, FiDownload, FiClock } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { FiArrowLeft, FiClock, FiDownload, FiFilter, FiSearch } from 'react-icons/fi';
 
 // Types
 type Transaction = {
@@ -36,7 +35,6 @@ type Student = {
 };
 
 export default function PointsHistoryPage() {
-  const { user } = useAuth();
   const router = useRouter();
   
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -68,7 +66,13 @@ export default function PointsHistoryPage() {
         const studentsData = await studentsRes.json();
         
         if (studentsData.users) {
-          setStudents(studentsData.users.map((user: any) => ({
+          setStudents(studentsData.users.map((user: { 
+            _id?: string;
+            id?: string;
+            username: string;
+            firstName?: string;
+            lastName?: string;
+          }) => ({
             id: user._id || user.id,
             username: user.username,
             firstName: user.firstName,
@@ -135,7 +139,7 @@ export default function PointsHistoryPage() {
   };
   
   // Get student display name
-  const getStudentName = (student: any) => {
+  const getStudentName = (student: Student) => {
     if (student.firstName && student.lastName) {
       return `${student.firstName} ${student.lastName}`;
     }

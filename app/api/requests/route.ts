@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
+import { getUserFromRequest, isAdmin, isAuthenticated, isStudent, isTutor } from '@/lib/server-auth';
 import ItemRequest, { RequestStatus } from '@/models/ItemRequest';
 import StoreItem from '@/models/StoreItem';
-import User, { UserRole } from '@/models/User';
-import PointsTransaction, { TransactionType } from '@/models/PointsTransaction';
-import { getUserFromRequest, isAuthenticated, isAdmin, isStudent, isTutor } from '@/lib/server-auth';
+import User from '@/models/User';
 import mongoose from 'mongoose';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Get requests based on user role
 export async function GET(request: NextRequest) {
@@ -24,11 +23,11 @@ export async function GET(request: NextRequest) {
     
     await connectToDatabase();
     
-    let query: any = {};
+    const query: { status?: RequestStatus; tutorId?: string; studentId?: string } = {};
     
     // Add status filter if provided
     if (status && Object.values(RequestStatus).includes(status as RequestStatus)) {
-      query.status = status;
+      query.status = status as RequestStatus;
     }
     
     // Filter based on user role

@@ -1,28 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  ChevronLeft, 
-  Search, 
-  UserPlus, 
-  Filter, 
-  MoreHorizontal, 
-  CheckCircle2, 
-  XCircle, 
-  Clock, 
-  Mail, 
-  Download, 
-  RefreshCw,
-  User
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -38,18 +28,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '@/components/ui/dialog';
+  CheckCircle2,
+  ChevronLeft,
+  Clock,
+  Download,
+  Filter,
+  Mail,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  User,
+  UserPlus,
+  XCircle
+} from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
-import { useParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'next/navigation';
 
 type Participant = {
   id: string;
@@ -61,6 +59,9 @@ type Participant = {
   email?: string;
   phone?: string;
   class?: string;
+  firstName?: string;
+  lastName?: string;
+  _id?: string;
 };
 
 type Event = {
@@ -73,7 +74,6 @@ type Event = {
 };
 
 export default function EventParticipants() {
-  const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   const { toast } = useToast();
@@ -131,7 +131,7 @@ export default function EventParticipants() {
         }
 
         const participantsData = await participantsResponse.json();
-        const formattedParticipants = participantsData.participants.map((participant: any) => ({
+        const formattedParticipants = participantsData.participants.map((participant: Participant) => ({
           id: participant._id || participant.id,
           name: `${participant.firstName} ${participant.lastName}`,
           studentId: participant.studentId,
@@ -557,7 +557,7 @@ export default function EventParticipants() {
           
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Select value={newStatus} onValueChange={(value: any) => setNewStatus(value)}>
+              <Select value={newStatus} onValueChange={(value: 'confirmed' | 'pending' | 'cancelled') => setNewStatus(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Durum seçin" />
                 </SelectTrigger>

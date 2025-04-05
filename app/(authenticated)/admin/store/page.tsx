@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/app/contexts/AuthContext';
-import Link from 'next/link';
-import Image from 'next/image';
 import { HeaderSkeleton, SearchFilterSkeleton, StoreItemCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
+import { useAuth } from '@/app/contexts/AuthContext';
+import Image from 'next/image';
+import { useEffect, useState } from 'react';
 
 type StoreItem = {
   id: string;
@@ -141,9 +140,9 @@ export default function AdminStore() {
       setTimeout(() => {
         setSuccessMessage('');
       }, 5000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Ürün ekleme hatası:', err);
-      setError(err.message || 'Ürün eklenemedi. Lütfen tekrar deneyin.');
+      setError(err instanceof Error ? err.message : 'Ürün eklenemedi. Lütfen tekrar deneyin.');
     } finally {
       setAddingItem(false);
     }

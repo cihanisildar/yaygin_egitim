@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ leaderboard }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error fetching leaderboard:', error);
     return NextResponse.json(
-      { error: error.message || 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error' },
       { status: 500 }
     );
   }

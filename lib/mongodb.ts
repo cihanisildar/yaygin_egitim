@@ -1,74 +1,37 @@
-import mongoose from 'mongoose';
+import { MongoClient } from 'mongodb';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/ogrtakip';
+if (!process.env.MONGODB_URI) {
+  throw new Error('Please define the MONGODB_URI environment variable');
+}
 
-let cached = (global as any).mongoose || { conn: null, promise: null };
+const uri = process.env.MONGODB_URI;
+const options = {};
 
-export async function connectToDatabase(retryAttempts = 3) {
-  // If we already have a connection, use it
-  if (cached.conn) {
-    return cached.conn;
-  }
+let client;
+let clientPromise: Promise<MongoClient>;
 
-  // If a connection attempt is in progress, wait for it
-  if (cached.promise) {
-    try {
-      cached.conn = await cached.promise;
-      return cached.conn;
-    } catch (error) {
-      // If the existing promise failed, clear it and try again
-      cached.promise = null;
-      console.error('Previous connection attempt failed:', error);
-    }
-  }
-
-  // Configure connection options
-  const opts = {
-    bufferCommands: false,
-    connectTimeoutMS: 10000, // 10 seconds
-    socketTimeoutMS: 45000,  // 45 seconds
-    serverSelectionTimeoutMS: 10000, // 10 seconds
-    maxPoolSize: 10, // Maintain up to 10 socket connections
+if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a global variable so that the value
+  // is preserved across module reloads caused by HMR (Hot Module Replacement).
+  let globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>;
   };
 
-  // Function to attempt connection with retries
-  const attemptConnection = async (attempts: number): Promise<mongoose.Mongoose> => {
-    try {
-      console.log(`MongoDB connection attempt ${retryAttempts - attempts + 1}/${retryAttempts}`);
-      return await mongoose.connect(MONGODB_URI, opts);
-    } catch (error: any) {
-      if (attempts <= 1) {
-        console.error('All MongoDB connection attempts failed:', error);
-        throw error;
-      }
-      
-      // Wait before retrying (exponential backoff)
-      const backoffTime = Math.min(Math.pow(2, retryAttempts - attempts + 1) * 100, 3000);
-      console.log(`Retrying MongoDB connection in ${backoffTime}ms...`);
-      await new Promise(resolve => setTimeout(resolve, backoffTime));
-      
-      // Recursive retry with one fewer attempt
-      return attemptConnection(attempts - 1);
-    }
-  };
-
-  // Set the promise for connection attempt
-  cached.promise = attemptConnection(retryAttempts)
-    .then(mongoose => {
-      console.log('MongoDB connected successfully');
-      return mongoose;
-    });
-
-  // Await the connection
-  try {
-    cached.conn = await cached.promise;
-  } catch (error) {
-    cached.promise = null;
-    console.error('MongoDB connection failed:', error);
-    throw error;
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options);
+    globalWithMongo._mongoClientPromise = client.connect();
   }
+  clientPromise = globalWithMongo._mongoClientPromise;
+} else {
+  // In production mode, it's best to not use a global variable.
+  client = new MongoClient(uri, options);
+  clientPromise = client.connect();
+}
 
-  return cached.conn;
+export async function connectToDatabase() {
+  const client = await clientPromise;
+  const db = client.db();
+  return { client, db };
 }
 
 export default connectToDatabase; 

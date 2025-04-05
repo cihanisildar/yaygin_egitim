@@ -1,19 +1,18 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { UserRole } from '@/models/User';
-import toast from 'react-hot-toast';
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { UserRole } from '@/models/User';
+import Link from 'next/link';
+import React, { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import { HeaderSkeleton, SearchFilterSkeleton, UserCardSkeleton } from '../../../components/ui/skeleton-shimmer';
 
 type User = {
@@ -28,7 +27,6 @@ type User = {
 };
 
 export default function AdminUsersPage() {
-  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,9 +116,13 @@ export default function AdminUsersPage() {
       // Close the dialog
       setDeleteDialogOpen(false);
       setUserToDelete(null);
-    } catch (err: any) {
-      console.error('Delete user error:', err);
-      toast.error(err.message || 'Kullanıcı silinirken bir hata oluştu');
+    } catch (error: unknown) {
+      console.error('Delete user error:', error);
+      if (error instanceof Error) {
+        toast.error(error.message || 'Kullanıcı silinirken bir hata oluştu');
+      } else {
+        toast.error('Kullanıcı silinirken bir hata oluştu');
+      }
     } finally {
       setDeleteLoading(false);
     }

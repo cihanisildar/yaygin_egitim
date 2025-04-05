@@ -6,11 +6,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
 } from "@/components/ui/dialog"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -76,8 +73,9 @@ export default function PointsUpdateDialog({
       if (onPointsUpdated) {
         onPointsUpdated(data.user.points)
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Puanlar güncellenemedi')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Puanlar güncellenemedi'
+      toast.error(errorMessage)
       console.error('Points update error:', error)
     } finally {
       setLoading(false)

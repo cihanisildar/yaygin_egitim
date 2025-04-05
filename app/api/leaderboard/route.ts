@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User, { UserRole } from '@/models/User';
 import { isAuthenticated, getUserFromRequest } from '@/lib/server-auth';
+import { ObjectId } from 'mongodb';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +18,16 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
 
     // Get all students sorted by points
-    const students = await User.find({ role: UserRole.STUDENT })
+    const students = (await User.find({ role: UserRole.STUDENT })
       .select('username firstName lastName points')
       .sort({ points: -1 })
-      .lean();
+      .lean()) as unknown as Array<{
+        _id: ObjectId;
+        username: string;
+        firstName?: string;
+        lastName?: string;
+        points?: number;
+      }>;
 
     // Map students to leaderboard entries with ranks
     const leaderboard = students.map((student, index) => ({

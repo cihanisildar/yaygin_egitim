@@ -1,38 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Tag, 
-  Users, 
-  Edit, 
-  Trash2, 
-  Share2, 
-  ChevronLeft,
-  Award,
-  CalendarClock,
-  FileText,
-  UserCheck,
-  UserPlus,
-  Globe,
-  Video,
-  User,
-  CheckCircle2,
-  XCircle,
-  AlertCircle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useParams } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  AlertCircle,
+  Award,
+  Calendar,
+  CalendarClock,
+  ChevronLeft,
+  Clock,
+  Edit,
+  Globe,
+  MapPin,
+  Share2,
+  Trash2,
+  User,
+  Users,
+  Video
+} from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 type Event = {
   id: string;
@@ -53,22 +44,12 @@ type Event = {
   };
 };
 
-type Participant = {
-  id: string;
-  name: string;
-  avatar?: string;
-  studentId: string;
-  status: 'confirmed' | 'pending' | 'cancelled';
-  joinedAt: string;
-};
-
 export default function EventDetails() {
   const router = useRouter();
   const params = useParams();
   const eventId = params.id as string;
   
   const [event, setEvent] = useState<Event | null>(null);
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -189,32 +170,6 @@ export default function EventDetails() {
         return 'Karma';
       default:
         return type;
-    }
-  };
-
-  const getParticipantStatusIcon = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-amber-600" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return null;
-    }
-  };
-
-  const getParticipantStatusText = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'Onaylandı';
-      case 'pending':
-        return 'Beklemede';
-      case 'cancelled':
-        return 'İptal Edildi';
-      default:
-        return status;
     }
   };
 
@@ -473,115 +428,4 @@ export default function EventDetails() {
       </Dialog>
     </div>
   );
-}
-
-// Mock data for a single event
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'Matematik Olimpiyatları Hazırlık Semineri',
-    description: 'Bu seminer, matematik olimpiyatlarına hazırlanan öğrenciler için problem çözme teknikleri ve stratejileri sunacaktır.\n\nTüm katılımcılar, seminer öncesinde temel matematik kavramlarını gözden geçirmelidir. Etkinlik sırasında, olimpiyat tarzı problemleri çözmek için gerekli analitik düşünme becerileri üzerinde durulacaktır.\n\nKapsam:\n- Olimpiyat matematiği nedir?\n- Problem çözme yaklaşımları\n- Temel stratejiler ve teknikler\n- Örnek problemler ve çözümleri\n- Grup çalışması ve tartışma\n\nMatematik olimpiyatlarına katılmak isteyen veya matematiksel problem çözme becerilerini geliştirmek isteyen tüm öğrenciler bu etkinliğe katılabilir.',
-    startDate: '2023-06-01T09:00:00Z',
-    endDate: '2023-06-01T12:00:00Z',
-    location: 'Zoom (Online)',
-    type: 'online',
-    status: 'upcoming',
-    capacity: 30,
-    enrolledStudents: 18,
-    points: 50,
-    tags: ['Matematik', 'Olimpiyat', 'Problem Çözme'],
-    createdBy: {
-      id: '101',
-      name: 'Ahmet Yılmaz'
-    }
-  },
-  {
-    id: '2',
-    title: 'Fizik Deneyleri Atölyesi',
-    description: 'Öğrencilerin fizik kanunlarını pratik olarak gözlemleyebilecekleri interaktif bir atölye çalışması.',
-    startDate: '2023-05-15T13:00:00Z',
-    endDate: '2023-05-15T15:30:00Z',
-    location: 'Fizik Laboratuvarı',
-    type: 'in-person',
-    status: 'ongoing',
-    capacity: 20,
-    enrolledStudents: 20,
-    points: 30,
-    tags: ['Fizik', 'Laboratuvar', 'Deney'],
-    createdBy: {
-      id: '102',
-      name: 'Zeynep Kaya'
-    }
-  },
-  {
-    id: '3',
-    title: 'İngilizce Konuşma Kulübü',
-    description: 'Öğrencilerin İngilizce konuşma becerilerini geliştirmeleri için haftalık düzenlenen sohbet kulübü.',
-    startDate: '2023-05-10T16:00:00Z',
-    endDate: '2023-05-10T17:30:00Z',
-    location: 'Dil Laboratuvarı',
-    type: 'in-person',
-    status: 'completed',
-    capacity: 15,
-    enrolledStudents: 12,
-    points: 20,
-    tags: ['İngilizce', 'Konuşma', 'Dil Becerisi'],
-    createdBy: {
-      id: '103',
-      name: 'Elif Demir'
-    }
-  }
-];
-
-// Mock participants data
-const mockParticipants: Participant[] = [
-  {
-    id: '1',
-    name: 'Ayşe Yıldız',
-    studentId: '2023001',
-    status: 'confirmed',
-    joinedAt: '2023-05-10T14:32:00Z'
-  },
-  {
-    id: '2',
-    name: 'Mehmet Can',
-    studentId: '2023015',
-    status: 'confirmed',
-    joinedAt: '2023-05-11T09:15:00Z'
-  },
-  {
-    id: '3',
-    name: 'Zeynep Kara',
-    studentId: '2023022',
-    status: 'pending',
-    joinedAt: '2023-05-12T16:40:00Z'
-  },
-  {
-    id: '4',
-    name: 'Ali Demir',
-    studentId: '2023008',
-    status: 'confirmed',
-    joinedAt: '2023-05-10T18:22:00Z'
-  },
-  {
-    id: '5',
-    name: 'Selin Yılmaz',
-    studentId: '2023019',
-    status: 'confirmed',
-    joinedAt: '2023-05-11T11:05:00Z'
-  },
-  {
-    id: '6',
-    name: 'Burak Şahin',
-    studentId: '2023029',
-    status: 'cancelled',
-    joinedAt: '2023-05-12T14:10:00Z'
-  },
-  {
-    id: '7',
-    name: 'Deniz Aksoy',
-    studentId: '2023017',
-    status: 'confirmed',
-    joinedAt: '2023-05-13T09:30:00Z'
-  }
-]; 
+} 

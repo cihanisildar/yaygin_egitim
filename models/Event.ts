@@ -1,17 +1,11 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IEvent extends Document {
   title: string;
   description: string;
-  startDateTime: Date;
-  endDateTime: Date;
-  location: string;
-  type: 'online' | 'in-person';
-  capacity: number;
-  points: number;
-  tags: string[];
+  date: Date;
   createdBy: mongoose.Types.ObjectId;
-  status: 'upcoming' | 'ongoing' | 'completed' | 'cancelled';
+  updatedBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,63 +14,31 @@ const EventSchema = new Schema<IEvent>(
   {
     title: {
       type: String,
-      required: true,
+      required: [true, 'Title is required'],
       trim: true,
     },
     description: {
       type: String,
-      required: true,
+      required: [true, 'Description is required'],
       trim: true,
     },
-    startDateTime: {
+    date: {
       type: Date,
-      required: true,
+      required: [true, 'Date is required'],
     },
-    endDateTime: {
-      type: Date,
-      required: true,
-    },
-    location: {
-      type: String,
-      required: true,
-      default: 'Online',
-    },
-    type: {
-      type: String,
-      enum: ['online', 'in-person'],
-      default: 'in-person',
-    },
-    capacity: {
-      type: Number,
-      required: true,
-      default: 20,
-      min: 1,
-    },
-    points: {
-      type: Number,
-      required: true,
-      default: 0,
-      min: 0,
-    },
-    tags: [{
-      type: String,
-      trim: true,
-    }],
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    status: {
-      type: String,
-      enum: ['upcoming', 'ongoing', 'completed', 'cancelled'],
-      default: 'upcoming',
+    updatedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-// Eliminate duplicate model compilation errors in development
-const Event: Model<IEvent> = mongoose.models.Event || mongoose.model<IEvent>('Event', EventSchema);
-
-export default Event; 
+export default mongoose.models.Event || mongoose.model<IEvent>('Event', EventSchema); 

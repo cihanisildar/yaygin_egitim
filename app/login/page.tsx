@@ -1,20 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '../contexts/AuthContext';
-import Link from 'next/link';
-import toast from 'react-hot-toast';
 import { ArrowRight, User2 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import toast from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const { login, loading } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +23,7 @@ export default function LoginPage() {
     try {
       const username = `${firstName.toLowerCase()}.${lastName.toLowerCase()}`.replace(/\s+/g, '');
       await login(username, password);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err);
       toast.error('Giriş başarısız. Lütfen tekrar deneyin.');
     }

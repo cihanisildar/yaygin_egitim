@@ -1,39 +1,34 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Tag, 
-  Save,
+import {
+  Calendar,
   ChevronLeft,
-  X,
-  CalendarClock,
-  Info,
-  HelpCircle,
-  Video,
+  Clock,
+  Globe,
+  MapPin,
+  Save,
+  Tag,
   User,
-  Globe
+  Video,
+  X
 } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
   Form,
@@ -44,11 +39,11 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useParams } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useToast } from '@/hooks/use-toast';
 
 // Form validation schema
 const eventFormSchema = z.object({

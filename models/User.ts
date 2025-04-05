@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export enum UserRole {
@@ -12,50 +12,41 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
-  points: number;
-  tutorId?: mongoose.Types.ObjectId;
   firstName?: string;
   lastName?: string;
+  tutorId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
-  comparePassword: (password: string) => Promise<boolean>;
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const UserSchema = new Schema<IUser>(
   {
     username: {
       type: String,
-      required: true,
+      required: [true, 'Username is required'],
       unique: true,
       trim: true,
+      minlength: [3, 'Username must be at least 3 characters long'],
     },
     email: {
       type: String,
-      required: true,
+      required: [true, 'Email is required'],
       unique: true,
       trim: true,
       lowercase: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
     password: {
       type: String,
-      required: true,
-      minlength: 6,
+      required: [true, 'Password is required'],
+      minlength: [6, 'Password must be at least 6 characters long'],
+      select: false,
     },
     role: {
       type: String,
       enum: Object.values(UserRole),
-      default: UserRole.STUDENT,
-    },
-    points: {
-      type: Number,
-      default: 0,
-    },
-    tutorId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: function (this: IUser) {
-        return this.role === UserRole.STUDENT;
-      },
+      required: [true, 'Role is required'],
     },
     firstName: {
       type: String,
@@ -65,32 +56,39 @@ const UserSchema = new Schema<IUser>(
       type: String,
       trim: true,
     },
+    tutorId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: function(this: IUser) {
+        return this.role === UserRole.STUDENT;
+      },
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-// Password hashing middleware
-UserSchema.pre('save', async function (next) {
-  const user = this;
-  if (!user.isModified('password')) return next();
-
+// Hash password before saving
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
   try {
     const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(user.password, salt);
-    next();
+    this.password = await bcrypt.hash(this.password, salt);
+    return next();
   } catch (error: any) {
     return next(error);
   }
 });
 
-// Password comparison method
-UserSchema.methods.comparePassword = async function (password: string): Promise<boolean> {
-  return bcrypt.compare(password, this.password);
+// Compare password method
+UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(candidatePassword, this.password);
+  } catch (error) {
+    throw error;
+  }
 };
 
-// Eliminate duplicate model compilation errors in development
-const User: Model<IUser> = (mongoose.models && mongoose.models.User) 
-  ? mongoose.models.User as Model<IUser>
-  : mongoose.model<IUser>('User', UserSchema);
-
-export default User; 
+export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema); 

@@ -7,6 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 
+interface ApiResponse {
+  user: {
+    points: number;
+  };
+  error?: string;
+}
+
 interface PointsManagerProps {
   userId: string;
   currentPoints: number;
@@ -43,11 +50,11 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
       });
       
       if (!response.ok) {
-        const data = await response.json();
+        const data = await response.json() as ApiResponse;
         throw new Error(data.error || 'Puanlar güncellenemedi');
       }
       
-      const data = await response.json();
+      const data = await response.json() as ApiResponse;
       
       toast.success('Puanlar başarıyla güncellendi');
       
@@ -59,8 +66,9 @@ export default function PointsManager({ userId, currentPoints, onPointsUpdated }
       if (onPointsUpdated) {
         onPointsUpdated(data.user.points);
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Puanlar güncellenemedi');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Puanlar güncellenemedi';
+      toast.error(errorMessage);
       console.error('Points update error:', error);
     } finally {
       setLoading(false);

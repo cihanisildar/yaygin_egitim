@@ -1,31 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Tag, 
-  Users, 
-  Award, 
-  Info, 
-  ChevronLeft, 
-  Save, 
-  Plus,
-  X,
-  Globe,
-  User,
-  Video
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Award,
+  Calendar,
+  ChevronLeft,
+  Clock,
+  Globe,
+  Info,
+  MapPin,
+  Plus,
+  Save,
+  Tag,
+  User,
+  Users,
+  Video,
+  X
+} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export default function CreateEventPage() {
   const router = useRouter();
@@ -137,24 +137,23 @@ export default function CreateEventPage() {
       console.log('API Response data:', responseData);
 
       router.push('/tutor/events');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Detailed error creating event:', error);
       // Log the full error object
-      console.error('Full error object:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      });
-      alert('Etkinlik oluşturulurken bir hata oluştu: ' + error.message);
+      if (error instanceof Error) {
+        console.error('Full error object:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        });
+        alert('Etkinlik oluşturulurken bir hata oluştu: ' + error.message);
+      } else {
+        console.error('Unknown error:', error);
+        alert('Etkinlik oluşturulurken beklenmeyen bir hata oluştu.');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  // Helper function to set today as default for date inputs
-  const getTodayDate = () => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
   };
   
   return (

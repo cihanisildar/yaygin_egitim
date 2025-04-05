@@ -1,18 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/app/contexts/AuthContext';
-import { 
-  Card, CardContent, CardDescription, CardHeader, CardTitle 
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card, CardContent, CardDescription, CardHeader, CardTitle
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { FiArrowLeft, FiSearch, FiAward, FiUserCheck, FiUser } from 'react-icons/fi';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { FiArrowLeft, FiAward, FiSearch, FiUser, FiUserCheck } from 'react-icons/fi';
 
 // Types
 type Student = {
@@ -21,6 +20,15 @@ type Student = {
   firstName?: string;
   lastName?: string;
   points: number;
+};
+
+type APIUser = {
+  _id?: string;
+  id?: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  points?: number;
 };
 
 // Award reasons presets to help tutors
@@ -34,7 +42,6 @@ const AWARD_REASON_PRESETS = [
 ];
 
 export default function AwardPointsPage() {
-  const { user } = useAuth();
   const router = useRouter();
   
   const [students, setStudents] = useState<Student[]>([]);
@@ -55,15 +62,15 @@ export default function AwardPointsPage() {
         const data = await response.json();
         
         if (data.users) {
-          setStudents(data.users.map((user: any) => ({
-            id: user._id || user.id,
+          setStudents(data.users.map((user: APIUser) => ({
+            id: user._id || user.id || '',
             username: user.username,
             firstName: user.firstName,
             lastName: user.lastName,
             points: user.points || 0
           })));
         }
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error fetching students:', error);
         toast.error('Öğrenciler yüklenirken bir hata oluştu.');
       } finally {
@@ -145,9 +152,9 @@ export default function AwardPointsPage() {
         setReason('');
         setSuccess(false);
       }, 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error awarding points:', error);
-      toast.error(error.message || 'Bir hata oluştu');
+      toast.error(error instanceof Error ? error.message : 'Bir hata oluştu');
     } finally {
       setIsSubmitting(false);
     }

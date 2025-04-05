@@ -35,6 +35,19 @@ type PointHistory = {
   createdAt: string;
 };
 
+type LeaderboardStudent = {
+  id: string;
+  username: string;
+  points: number;
+};
+
+type Request = {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  itemId: string;
+  createdAt: string;
+};
+
 function LoadingDashboard() {
   return (
     <div className="p-4 md:p-6">
@@ -159,31 +172,31 @@ export default function StudentDashboard() {
         
         // Get leaderboard to determine rank
         const leaderboardRes = await fetch('/api/leaderboard');
-        const leaderboardData = await leaderboardRes.json();
+        const leaderboardData: { leaderboard: LeaderboardStudent[] } = await leaderboardRes.json();
         
         // Find user's rank
         const userRank = leaderboardData.leaderboard.findIndex(
-          (student: any) => student.id === user?.id
+          (student: LeaderboardStudent) => student.id === user?.id
         ) + 1;
         
         // Get upcoming events
         const eventsRes = await fetch('/api/events');
-        const eventsData = await eventsRes.json();
+        const eventsData: { events: Event[] } = await eventsRes.json();
         
         // Get points history
         const pointsRes = await fetch('/api/points');
-        const pointsData = await pointsRes.json();
+        const pointsData: { transactions: PointHistory[] } = await pointsRes.json();
         
         // Get requests
         const requestsRes = await fetch('/api/requests');
-        const requestsData = await requestsRes.json();
+        const requestsData: { requests: Request[] } = await requestsRes.json();
         
         const pendingRequests = requestsData.requests.filter(
-          (req: any) => req.status === 'pending'
+          (req: Request) => req.status === 'pending'
         ).length;
         
         const approvedRequests = requestsData.requests.filter(
-          (req: any) => req.status === 'approved'
+          (req: Request) => req.status === 'approved'
         ).length;
         
         setStats({
@@ -199,15 +212,15 @@ export default function StudentDashboard() {
         today.setHours(0, 0, 0, 0);
         
         const upcoming = eventsData.events
-          .filter((event: any) => new Date(event.date) >= today)
-          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .filter((event: Event) => new Date(event.date) >= today)
+          .sort((a: Event, b: Event) => new Date(a.date).getTime() - new Date(b.date).getTime())
           .slice(0, 3);
         
         setUpcomingEvents(upcoming);
         
         // Get recent point history (last 5 transactions)
         const recent = pointsData.transactions
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+          .sort((a: PointHistory, b: PointHistory) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
           .slice(0, 5);
         
         setRecentPoints(recent);

@@ -7,7 +7,7 @@ import { getUserFromRequest } from '@/lib/server-auth';
 // Update user points
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getUserFromRequest(request);
@@ -19,7 +19,7 @@ export async function POST(
       );
     }
     
-    const userId = params.id;
+    const { id } = await params;
     const body = await request.json();
     const { points, action } = body;
     
@@ -42,7 +42,7 @@ export async function POST(
 
     await connectToDatabase();
 
-    const user = await User.findById(userId);
+    const user = await User.findById(id);
 
     if (!user) {
       return NextResponse.json(

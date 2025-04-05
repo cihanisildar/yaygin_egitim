@@ -4,9 +4,6 @@ import StoreItem from '@/models/StoreItem';
 import { isAdmin, isAuthenticated, isTutor } from '@/lib/server-auth';
 import { getUserFromRequest } from '@/lib/server-auth';
 
-// Default empty response
-const EMPTY_RESPONSE = { items: [] };
-
 // Helper to handle connection retries
 async function withConnectionRetry<T>(operation: () => Promise<T>, maxRetries = 3): Promise<T> {
   let lastError;
@@ -26,6 +23,14 @@ async function withConnectionRetry<T>(operation: () => Promise<T>, maxRetries = 
   }
   
   throw lastError;
+}
+
+interface DatabaseError extends Error {
+  code?: string;
+}
+
+function isDatabaseError(error: unknown): error is DatabaseError {
+  return error instanceof Error && 'code' in error;
 }
 
 export async function GET(request: NextRequest) {
@@ -72,41 +77,50 @@ export async function GET(request: NextRequest) {
         },
         { status: 200 }
       );
-    } catch (dbError: any) {
+    } catch (dbError: unknown) {
       // Log database specific error
-      console.error('Database error in store items:', dbError);
+      if (isDatabaseError(dbError)) {
+        console.error('Database error in store items:', dbError);
+        console.error('DB Error details:', {
+          message: dbError.message,
+          stack: dbError.stack,
+          name: dbError.name,
+          code: dbError.code
+        });
+      }
       
       // More detailed error logging for diagnosis
       console.error('DB Error details:', {
-        message: dbError.message,
-        stack: dbError.stack,
-        name: dbError.name,
-        code: dbError.code
+        message: dbError instanceof Error ? dbError.message : undefined,
+        stack: dbError instanceof Error ? dbError.stack : undefined,
+        name: dbError instanceof Error ? dbError.name : undefined
       });
       
       // Return a more specific error message
       return NextResponse.json(
         { 
           error: 'Database connection error',
-          details: process.env.NODE_ENV === 'development' ? dbError.message : undefined,
+          details: process.env.NODE_ENV === 'development' ? dbError instanceof Error ? dbError.message : undefined : undefined,
           items: [] // Return empty array to allow client to handle gracefully
         },
         { status: 503 } // Service Unavailable is better than 500 for DB connection issues
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // General error handling with more details
-    console.error('Get store items error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+    if (error instanceof Error) {
+      console.error('Get store items error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
     
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : undefined : undefined,
         items: [] // Return empty array
       },
       { status: 500 }
@@ -180,35 +194,39 @@ export async function POST(request: NextRequest) {
         },
         { status: 201 }
       );
-    } catch (dbError: any) {
-      console.error('Database error creating store item:', dbError);
-      console.error('DB Error details:', {
-        message: dbError.message,
-        stack: dbError.stack,
-        name: dbError.name,
-        code: dbError.code
-      });
+    } catch (dbError: unknown) {
+      if (isDatabaseError(dbError)) {
+        console.error('Database error creating store item:', dbError);
+        console.error('DB Error details:', {
+          message: dbError.message,
+          stack: dbError.stack,
+          name: dbError.name,
+          code: dbError.code
+        });
+      }
       
       return NextResponse.json(
         { 
           error: 'Database connection error',
-          details: process.env.NODE_ENV === 'development' ? dbError.message : undefined
+          details: process.env.NODE_ENV === 'development' ? dbError instanceof Error ? dbError.message : undefined : undefined
         },
         { status: 503 }
       );
     }
-  } catch (error: any) {
-    console.error('Create store item error:', error);
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Create store item error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
     
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : undefined : undefined
       },
       { status: 500 }
     );

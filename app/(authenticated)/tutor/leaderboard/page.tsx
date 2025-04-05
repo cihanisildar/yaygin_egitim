@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from "react";
 import { HeaderSkeleton } from '@/app/components/ui/skeleton-shimmer';
-import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -10,18 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { 
-  Medal, 
-  Trophy, 
-  Award, 
-  BarChart2, 
-  Users,
-  User,
-} from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/app/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import {
+  Award,
+  BarChart2,
+  Medal,
+  Trophy,
+  User,
+  Users,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface Student {
   id: string;
@@ -60,7 +59,7 @@ function LeaderboardHeader() {
 
 // Dynamic Leaderboard Content Component
 function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardContentProps) {
-  function getDisplayName(user: any) {
+  function getDisplayName(user: Student | TutorStudent) {
     return user.firstName && user.lastName
       ? `${user.firstName} ${user.lastName}`
       : user.username;
@@ -74,21 +73,21 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
   }
   
   // Extract tutor's students from the leaderboard
-  const myStudentsLeaderboard = leaderboardData.filter((student: any) => 
-    tutorStudents.some((tutorStudent: any) => tutorStudent.id === student.id)
+  const myStudentsLeaderboard = leaderboardData.filter((student: Student) => 
+    tutorStudents.some((tutorStudent: TutorStudent) => tutorStudent.id === student.id)
   );
   
   // Calculate statistics for my students
   const stats = {
     count: myStudentsLeaderboard.length,
     avgRank: myStudentsLeaderboard.length > 0 
-      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: any) => sum + student.rank, 0) / myStudentsLeaderboard.length) 
+      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: Student) => sum + student.rank, 0) / myStudentsLeaderboard.length) 
       : 0,
     avgPoints: myStudentsLeaderboard.length > 0 
-      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: any) => sum + student.points, 0) / myStudentsLeaderboard.length) 
+      ? Math.round(myStudentsLeaderboard.reduce((sum: number, student: Student) => sum + student.points, 0) / myStudentsLeaderboard.length) 
       : 0,
     topRank: myStudentsLeaderboard.length > 0 
-      ? Math.min(...myStudentsLeaderboard.map((student: any) => student.rank)) 
+      ? Math.min(...myStudentsLeaderboard.map((student: Student) => student.rank)) 
       : 0,
   };
 
@@ -186,7 +185,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                       </tr>
                     </thead>
                     <tbody>
-                      {myStudentsLeaderboard.map((student: any) => (
+                      {myStudentsLeaderboard.map((student: Student) => (
                         <tr 
                           key={student.id}
                           className={cn(
@@ -259,7 +258,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboardData.map((student: any) => (
+                    {leaderboardData.map((student: Student) => (
                       <tr 
                         key={student.id}
                         className={cn(
@@ -267,7 +266,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                             student.rank === 1 ? 'bg-yellow-50' : 
                             student.rank === 2 ? 'bg-gray-50' : 
                             'bg-amber-50' : '',
-                          tutorStudents.some((tutorStudent: any) => tutorStudent.id === student.id) ? 'bg-indigo-50/40' : '',
+                          tutorStudents.some((tutorStudent: TutorStudent) => tutorStudent.id === student.id) ? 'bg-indigo-50/40' : '',
                           "hover:bg-gray-50 transition-colors"
                         )}
                       >
@@ -291,7 +290,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                                 student.rank === 1 ? 'bg-yellow-100 text-yellow-800' : 
                                 student.rank === 2 ? 'bg-gray-100 text-gray-800' : 
                                 student.rank === 3 ? 'bg-amber-100 text-amber-800' : 
-                                tutorStudents.some((tutorStudent: any) => tutorStudent.id === student.id) ? 'bg-indigo-100 text-indigo-800' :
+                                tutorStudents.some((tutorStudent: TutorStudent) => tutorStudent.id === student.id) ? 'bg-indigo-100 text-indigo-800' :
                                 'bg-gray-100 text-gray-800'
                               )}>
                                 {getDisplayName(student).charAt(0)}
@@ -301,7 +300,7 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
                               <span className="text-sm font-medium text-gray-900">
                                 {getDisplayName(student)}
                               </span>
-                              {tutorStudents.some((tutorStudent: any) => tutorStudent.id === student.id) && (
+                              {tutorStudents.some((tutorStudent: TutorStudent) => tutorStudent.id === student.id) && (
                                 <span className="text-xs text-indigo-600">Sizin öğrenciniz</span>
                               )}
                             </div>
@@ -322,85 +321,6 @@ function LeaderboardContent({ leaderboardData, tutorStudents }: LeaderboardConte
         </CardContent>
       </Card>
     </>
-  );
-}
-
-// Loading state components
-function StatsCardSkeleton() {
-  return (
-    <Card className="border-0 shadow-lg rounded-xl overflow-hidden transition-all duration-200">
-      <div className="h-1 bg-gradient-to-r from-gray-200 to-gray-300"></div>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-8 w-16 mt-1" />
-          </div>
-          <Skeleton className="h-12 w-12 rounded-full" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function LeaderboardTableSkeleton() {
-  return (
-    <Card className="border-0 shadow-lg rounded-xl overflow-hidden">
-      <div className="h-1 bg-gradient-to-r from-gray-200 to-gray-300"></div>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-5" />
-          <Skeleton className="h-6 w-48" />
-        </div>
-        <Skeleton className="h-4 w-64 mt-1" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-[400px]" />
-          <div className="rounded-md border overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="px-4 py-3 w-16">
-                    <Skeleton className="h-4 w-8" />
-                  </th>
-                  <th className="px-4 py-3 text-left">
-                    <Skeleton className="h-4 w-24" />
-                  </th>
-                  <th className="px-4 py-3 text-right w-24">
-                    <Skeleton className="h-4 w-16 ml-auto" />
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...Array(10)].map((_, index) => (
-                  <tr key={`row-skeleton-${index}`}>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Skeleton className="h-4 w-6" />
-                        {index < 3 && <Skeleton className="h-4 w-4" />}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <div className="space-y-1">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <Skeleton className="h-4 w-16 ml-auto" />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -478,7 +398,6 @@ function LoadingLeaderboard() {
 }
 
 export default function TutorLeaderboardPage() {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leaderboardData, setLeaderboardData] = useState<Student[]>([]);
@@ -518,9 +437,10 @@ export default function TutorLeaderboardPage() {
 
       const studentsJson = await studentsRes.json();
       setTutorStudents(studentsJson.students || []);
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error fetching data:', err);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setError(errorMessage);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }

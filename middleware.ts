@@ -1,58 +1,18 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getUserFromRequest } from './lib/server-auth';
+import { jwtVerify } from 'jose';
 
-export async function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
-  console.log('Middleware processing path:', pathname);
-
-  // Skip middleware for public assets and auth API routes
-  if (pathname.startsWith('/_next/') || 
-      pathname.startsWith('/api/auth/') ||
-      pathname === '/favicon.ico') {
-    console.log('Skipping middleware for:', pathname);
-    return NextResponse.next();
-  }
-
-  // Allow public paths
-  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
-    console.log('Allowing public path:', pathname);
-    return NextResponse.next();
-  }
-
-  try {
-    console.log('Checking auth for path:', pathname);
-    
-    const user = await getUserFromRequest(request);
-    console.log('Auth check result:', user ? 'authenticated' : 'not authenticated');
-
-    if (!user) {
-      console.log('No user found, redirecting to login');
-      const redirectUrl = new URL('/login', request.url);
-      const response = NextResponse.redirect(redirectUrl);
-      response.headers.set('x-middleware-cache', 'no-cache');
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
-      return response;
-    }
-
-    const response = NextResponse.next();
-    // Add user info to headers for debugging
-    response.headers.set('x-user-role', user.role);
-    response.headers.set('x-middleware-cache', 'no-cache');
-    response.headers.set('Cache-Control', 'no-store, must-revalidate');
-    
-    return response;
-  } catch (error) {
-    console.error('Middleware error:', error);
-    const redirectUrl = new URL('/login', request.url);
-    const response = NextResponse.redirect(redirectUrl);
-    response.headers.set('x-middleware-cache', 'no-cache');
-    response.headers.set('Cache-Control', 'no-store, must-revalidate');
-    return response;
-  }
+interface JWTPayload {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
 }
 
-// Configure the middleware to run on specific paths
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const AUTH_COOKIE_NAME = 'ogrtakip-session';
+
+// Middleware configuration
 export const config = {
   matcher: [
     /*
@@ -64,4 +24,47 @@ export const config = {
      */
     '/((?!_next/static|_next/image|favicon.ico|api/auth).*)'
   ],
-}; 
+};
+
+async function verifyAuth(token: string) {
+  try {
+    const secret = new TextEncoder().encode(JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload as unknown as JWTPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Skip middleware for public assets and auth API routes
+  if (pathname.startsWith('/_next/') || 
+      pathname.startsWith('/api/auth/') ||
+      pathname === '/favicon.ico') {
+    return NextResponse.next();
+  }
+
+  // Allow public paths
+  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
+    return NextResponse.next();
+  }
+
+  try {
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const payload = token ? await verifyAuth(token) : null;
+
+    if (!payload) {
+      const redirectUrl = new URL('/login', request.url);
+      return NextResponse.redirect(redirectUrl);
+    }
+
+    const response = NextResponse.next();
+    response.headers.set('x-user-role', payload.role as string);
+    return response;
+  } catch {
+    const redirectUrl = new URL('/login', request.url);
+    return NextResponse.redirect(redirectUrl);
+  }
+} 

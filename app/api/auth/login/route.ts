@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import User, { UserRole } from '@/models/User';
-import { UserJwtPayload } from '@/lib/auth';
+import { UserJwtPayload } from '@/lib/types';
 import { signJWT, setJWTCookie } from '@/lib/server-auth';
 import { Document } from 'mongoose';
 
 interface UserDocument extends Document {
-  _id: any;
+  _id: string;
   username: string;
   email: string;
   role: UserRole;

@@ -1,39 +1,32 @@
 "use client";
 
-import { Suspense } from "react";
-import { useEffect, useState } from "react";
+import { StudentListSkeleton } from "@/app/components/ui/StudentListSkeleton";
+import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
 import { useAuth } from "@/app/contexts/AuthContext";
-import Link from "next/link";
-import {
-  GraduationCap,
-  Search,
-  CheckCircle,
-  Trophy,
-  FileText,
-  ArrowUpDown,
-  GripHorizontal,
-  Plus,
-  Filter,
-  Download,
-  ArrowRight,
-} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardFooter,
   CardHeader,
-  CardTitle,
+  CardTitle
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import { StudentListSkeleton } from "@/app/components/ui/StudentListSkeleton";
-import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowUpDown,
+  CheckCircle,
+  Filter,
+  GraduationCap,
+  GripHorizontal,
+  Plus,
+  Search,
+  Trophy
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState, useCallback } from "react";
 
 type Student = {
   id: string;
@@ -239,15 +232,7 @@ function StudentsList() {
     totalPages: 0,
   });
 
-  useEffect(() => {
-    fetchStudents();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [students, searchQuery, sortBy, sortOrder, activeTab]);
-
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/users?role=student&tutorId=${user?.id}`);
@@ -270,9 +255,9 @@ function StudentsList() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let result = [...students];
     
     // Apply search filter
@@ -308,7 +293,15 @@ function StudentsList() {
     });
     
     setFilteredStudents(result);
-  };
+  }, [students, searchQuery, sortBy, sortOrder, activeTab]);
+
+  useEffect(() => {
+    fetchStudents();
+  }, [fetchStudents]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
 
   const getFullName = (student: Student) => {
     if (student.firstName && student.lastName) {

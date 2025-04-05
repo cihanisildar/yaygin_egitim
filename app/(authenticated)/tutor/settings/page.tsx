@@ -1,14 +1,21 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useAuth } from "@/app/contexts/AuthContext";
-import Link from "next/link";
-import { FiUser, FiLock, FiBell, FiLayout, FiChevronRight, FiSave, FiXCircle } from "react-icons/fi";
-import toast from "react-hot-toast";
-import { SettingsSkeleton } from "@/app/components/ui/SettingsSkeleton";
 import { HeaderSkeleton } from "@/app/components/ui/skeleton-shimmer";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/app/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import {
+  FiBell,
+  FiChevronRight,
+  FiLayout,
+  FiLock,
+  FiSave,
+  FiUser,
+  FiXCircle,
+} from "react-icons/fi";
 
 // Static Header Component
 function SettingsHeader() {
@@ -19,8 +26,8 @@ function SettingsHeader() {
           Ayarlar
         </span>
       </h1>
-      <Link 
-        href="/tutor/profile" 
+      <Link
+        href="/tutor/profile"
         className="px-4 py-2 bg-white text-indigo-600 rounded-lg shadow-sm hover:shadow-md transition-all border border-indigo-100"
       >
         Profilime Dön
@@ -70,25 +77,27 @@ function SettingsContent() {
     fontSize: "medium",
   });
 
-  const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleProfileChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setProfileForm(prev => ({ ...prev, [name]: value }));
+    setProfileForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSecurityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setSecurityForm(prev => ({ ...prev, [name]: value }));
+    setSecurityForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleNotificationToggle = (setting: string) => {
-    setNotificationPreferences(prev => ({
+    setNotificationPreferences((prev) => ({
       ...prev,
       [setting]: !prev[setting as keyof typeof prev],
     }));
   };
 
   const handleAppearanceChange = (setting: string, value: string | boolean) => {
-    setAppearancePreferences(prev => ({
+    setAppearancePreferences((prev) => ({
       ...prev,
       [setting]: value,
     }));
@@ -96,19 +105,19 @@ function SettingsContent() {
 
   const saveSettings = async () => {
     setSaving(true);
-    
+
     // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Show success message
     toast.success("Ayarlarınız başarıyla kaydedildi.");
     setSuccessMessage("Ayarlarınız başarıyla güncellendi.");
-    
+
     // Clear success message after 3 seconds
     setTimeout(() => {
       setSuccessMessage("");
     }, 3000);
-    
+
     setSaving(false);
   };
 
@@ -117,7 +126,10 @@ function SettingsContent() {
       {successMessage && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-sm flex justify-between items-center">
           <span>{successMessage}</span>
-          <button onClick={() => setSuccessMessage("")} className="text-green-500 hover:text-green-700">
+          <button
+            onClick={() => setSuccessMessage("")}
+            className="text-green-500 hover:text-green-700"
+          >
             <FiXCircle size={20} />
           </button>
         </div>
@@ -131,58 +143,82 @@ function SettingsContent() {
               <button
                 onClick={() => setActiveTab("profile")}
                 className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "profile" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  activeTab === "profile"
+                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <div className="flex items-center">
-                  <FiUser className={`mr-3 h-5 w-5 ${activeTab === "profile" ? "text-indigo-500" : "text-gray-400"}`} />
+                  <FiUser
+                    className={`mr-3 h-5 w-5 ${
+                      activeTab === "profile"
+                        ? "text-indigo-500"
+                        : "text-gray-400"
+                    }`}
+                  />
                   <span className="font-medium">Profil Bilgileri</span>
                 </div>
                 <FiChevronRight className="h-4 w-4" />
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("security")}
                 className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "security" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  activeTab === "security"
+                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <div className="flex items-center">
-                  <FiLock className={`mr-3 h-5 w-5 ${activeTab === "security" ? "text-indigo-500" : "text-gray-400"}`} />
+                  <FiLock
+                    className={`mr-3 h-5 w-5 ${
+                      activeTab === "security"
+                        ? "text-indigo-500"
+                        : "text-gray-400"
+                    }`}
+                  />
                   <span className="font-medium">Güvenlik</span>
                 </div>
                 <FiChevronRight className="h-4 w-4" />
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("notifications")}
                 className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "notifications" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  activeTab === "notifications"
+                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <div className="flex items-center">
-                  <FiBell className={`mr-3 h-5 w-5 ${activeTab === "notifications" ? "text-indigo-500" : "text-gray-400"}`} />
+                  <FiBell
+                    className={`mr-3 h-5 w-5 ${
+                      activeTab === "notifications"
+                        ? "text-indigo-500"
+                        : "text-gray-400"
+                    }`}
+                  />
                   <span className="font-medium">Bildirimler</span>
                 </div>
                 <FiChevronRight className="h-4 w-4" />
               </button>
-              
+
               <button
                 onClick={() => setActiveTab("appearance")}
                 className={`w-full px-4 py-3 flex items-center justify-between ${
-                  activeTab === "appearance" 
-                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500" 
+                  activeTab === "appearance"
+                    ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500"
                     : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 <div className="flex items-center">
-                  <FiLayout className={`mr-3 h-5 w-5 ${activeTab === "appearance" ? "text-indigo-500" : "text-gray-400"}`} />
+                  <FiLayout
+                    className={`mr-3 h-5 w-5 ${
+                      activeTab === "appearance"
+                        ? "text-indigo-500"
+                        : "text-gray-400"
+                    }`}
+                  />
                   <span className="font-medium">Görünüm</span>
                 </div>
                 <FiChevronRight className="h-4 w-4" />
@@ -190,17 +226,22 @@ function SettingsContent() {
             </nav>
           </div>
         </div>
-        
+
         {/* Main Content */}
         <div className="md:col-span-3">
           <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
             {activeTab === "profile" && (
               <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Profil Bilgileri</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-6">
+                  Profil Bilgileri
+                </h2>
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        htmlFor="firstName"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         Ad
                       </label>
                       <input
@@ -213,7 +254,10 @@ function SettingsContent() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                      <label
+                        htmlFor="lastName"
+                        className="block text-sm font-medium text-gray-700 mb-1"
+                      >
                         Soyad
                       </label>
                       <input
@@ -226,9 +270,12 @@ function SettingsContent() {
                       />
                     </div>
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       E-posta Adresi
                     </label>
                     <input
@@ -240,9 +287,12 @@ function SettingsContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="phone"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Telefon Numarası
                     </label>
                     <input
@@ -256,7 +306,10 @@ function SettingsContent() {
                   </div>
 
                   <div>
-                    <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="specialization"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Uzmanlık Alanı
                     </label>
                     <input
@@ -268,9 +321,12 @@ function SettingsContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="bio"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Hakkımda
                     </label>
                     <textarea
@@ -285,13 +341,18 @@ function SettingsContent() {
                 </div>
               </div>
             )}
-            
+
             {activeTab === "security" && (
               <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Güvenlik Ayarları</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-6">
+                  Güvenlik Ayarları
+                </h2>
                 <div className="space-y-6">
                   <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="currentPassword"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Mevcut Şifre
                     </label>
                     <input
@@ -303,9 +364,12 @@ function SettingsContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="newPassword"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Yeni Şifre
                     </label>
                     <input
@@ -317,9 +381,12 @@ function SettingsContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div>
-                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="confirmPassword"
+                      className="block text-sm font-medium text-gray-700 mb-1"
+                    >
                       Yeni Şifre (Tekrar)
                     </label>
                     <input
@@ -331,110 +398,156 @@ function SettingsContent() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div className="bg-yellow-50 p-4 rounded-md border border-yellow-100">
                     <p className="text-sm text-yellow-700">
-                      Güvenli bir şifre en az 8 karakter uzunluğunda olmalı ve büyük harf, küçük harf, rakam ve özel karakter içermelidir.
+                      Güvenli bir şifre en az 8 karakter uzunluğunda olmalı ve
+                      büyük harf, küçük harf, rakam ve özel karakter
+                      içermelidir.
                     </p>
                   </div>
                 </div>
               </div>
             )}
-            
+
             {activeTab === "notifications" && (
               <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Bildirim Ayarları</h2>
+                <h2 className="text-xl font-bold text-gray-800 mb-6">
+                  Bildirim Ayarları
+                </h2>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
-                      <h3 className="text-md font-medium text-gray-700">E-posta Bildirimleri</h3>
-                      <p className="text-sm text-gray-500">Önemli güncellemeler için e-posta alın</p>
+                      <h3 className="text-md font-medium text-gray-700">
+                        E-posta Bildirimleri
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Önemli güncellemeler için e-posta alın
+                      </p>
                     </div>
                     <div className="flex items-center">
                       <button
                         type="button"
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.emailNotifications ? "bg-indigo-600" : "bg-gray-200"
+                          notificationPreferences.emailNotifications
+                            ? "bg-indigo-600"
+                            : "bg-gray-200"
                         }`}
                         role="switch"
-                        aria-checked={notificationPreferences.emailNotifications}
-                        onClick={() => handleNotificationToggle("emailNotifications")}
+                        aria-checked={
+                          notificationPreferences.emailNotifications
+                        }
+                        onClick={() =>
+                          handleNotificationToggle("emailNotifications")
+                        }
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.emailNotifications ? "translate-x-5" : "translate-x-0"
+                            notificationPreferences.emailNotifications
+                              ? "translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
-                      <h3 className="text-md font-medium text-gray-700">Anlık Bildirimler</h3>
-                      <p className="text-sm text-gray-500">Uygulama içi anlık bildirimler</p>
+                      <h3 className="text-md font-medium text-gray-700">
+                        Anlık Bildirimler
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Uygulama içi anlık bildirimler
+                      </p>
                     </div>
                     <div className="flex items-center">
                       <button
                         type="button"
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.pushNotifications ? "bg-indigo-600" : "bg-gray-200"
+                          notificationPreferences.pushNotifications
+                            ? "bg-indigo-600"
+                            : "bg-gray-200"
                         }`}
                         role="switch"
                         aria-checked={notificationPreferences.pushNotifications}
-                        onClick={() => handleNotificationToggle("pushNotifications")}
+                        onClick={() =>
+                          handleNotificationToggle("pushNotifications")
+                        }
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.pushNotifications ? "translate-x-5" : "translate-x-0"
+                            notificationPreferences.pushNotifications
+                              ? "translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
-                      <h3 className="text-md font-medium text-gray-700">Etkinlik Hatırlatıcıları</h3>
-                      <p className="text-sm text-gray-500">Yaklaşan etkinlikler için hatırlatıcılar</p>
+                      <h3 className="text-md font-medium text-gray-700">
+                        Etkinlik Hatırlatıcıları
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Yaklaşan etkinlikler için hatırlatıcılar
+                      </p>
                     </div>
                     <div className="flex items-center">
                       <button
                         type="button"
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.eventReminders ? "bg-indigo-600" : "bg-gray-200"
+                          notificationPreferences.eventReminders
+                            ? "bg-indigo-600"
+                            : "bg-gray-200"
                         }`}
                         role="switch"
                         aria-checked={notificationPreferences.eventReminders}
-                        onClick={() => handleNotificationToggle("eventReminders")}
+                        onClick={() =>
+                          handleNotificationToggle("eventReminders")
+                        }
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.eventReminders ? "translate-x-5" : "translate-x-0"
+                            notificationPreferences.eventReminders
+                              ? "translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between py-3 border-b border-gray-100">
                     <div>
-                      <h3 className="text-md font-medium text-gray-700">Öğrenci Güncellemeleri</h3>
-                      <p className="text-sm text-gray-500">Öğrencilerinizle ilgili önemli güncellemeler</p>
+                      <h3 className="text-md font-medium text-gray-700">
+                        Öğrenci Güncellemeleri
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Öğrencilerinizle ilgili önemli güncellemeler
+                      </p>
                     </div>
                     <div className="flex items-center">
                       <button
                         type="button"
                         className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          notificationPreferences.studentUpdates ? "bg-indigo-600" : "bg-gray-200"
+                          notificationPreferences.studentUpdates
+                            ? "bg-indigo-600"
+                            : "bg-gray-200"
                         }`}
                         role="switch"
                         aria-checked={notificationPreferences.studentUpdates}
-                        onClick={() => handleNotificationToggle("studentUpdates")}
+                        onClick={() =>
+                          handleNotificationToggle("studentUpdates")
+                        }
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                            notificationPreferences.studentUpdates ? "translate-x-5" : "translate-x-0"
+                            notificationPreferences.studentUpdates
+                              ? "translate-x-5"
+                              : "translate-x-0"
                           }`}
                         />
                       </button>
@@ -443,14 +556,18 @@ function SettingsContent() {
                 </div>
               </div>
             )}
-            
+
             {activeTab === "appearance" && (
               <div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6">Görünüm Ayarları</h2>
-                
+                <h2 className="text-xl font-bold text-gray-800 mb-6">
+                  Görünüm Ayarları
+                </h2>
+
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Tema</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tema
+                    </label>
                     <div className="grid grid-cols-3 gap-4">
                       <button
                         onClick={() => handleAppearanceChange("theme", "light")}
@@ -461,9 +578,11 @@ function SettingsContent() {
                         }`}
                       >
                         <div className="h-16 bg-white rounded-md border border-gray-200 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Açık</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          Açık
+                        </span>
                       </button>
-                      
+
                       <button
                         onClick={() => handleAppearanceChange("theme", "dark")}
                         className={`p-4 rounded-lg border ${
@@ -473,11 +592,15 @@ function SettingsContent() {
                         }`}
                       >
                         <div className="h-16 bg-gray-800 rounded-md border border-gray-700 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Koyu</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          Koyu
+                        </span>
                       </button>
-                      
+
                       <button
-                        onClick={() => handleAppearanceChange("theme", "system")}
+                        onClick={() =>
+                          handleAppearanceChange("theme", "system")
+                        }
                         className={`p-4 rounded-lg border ${
                           appearancePreferences.theme === "system"
                             ? "border-indigo-500 ring-2 ring-indigo-200"
@@ -485,67 +608,101 @@ function SettingsContent() {
                         }`}
                       >
                         <div className="h-16 bg-gradient-to-r from-white to-gray-800 rounded-md border border-gray-200 mb-2"></div>
-                        <span className="text-sm font-medium text-gray-900">Sistem</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          Sistem
+                        </span>
                       </button>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h3 className="text-md font-medium text-gray-700 mb-3">Görünüm Seçenekleri</h3>
+                    <h3 className="text-md font-medium text-gray-700 mb-3">
+                      Görünüm Seçenekleri
+                    </h3>
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-sm text-gray-700">Sıkıştırılmış Mod</span>
-                          <p className="text-xs text-gray-500">Daha kompakt bir yerleşim için</p>
+                          <span className="text-sm text-gray-700">
+                            Sıkıştırılmış Mod
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            Daha kompakt bir yerleşim için
+                          </p>
                         </div>
                         <button
                           type="button"
                           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            appearancePreferences.compactMode ? "bg-indigo-600" : "bg-gray-200"
+                            appearancePreferences.compactMode
+                              ? "bg-indigo-600"
+                              : "bg-gray-200"
                           }`}
                           role="switch"
                           aria-checked={appearancePreferences.compactMode}
-                          onClick={() => handleAppearanceChange("compactMode", !appearancePreferences.compactMode)}
+                          onClick={() =>
+                            handleAppearanceChange(
+                              "compactMode",
+                              !appearancePreferences.compactMode
+                            )
+                          }
                         >
                           <span
                             className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              appearancePreferences.compactMode ? "translate-x-5" : "translate-x-0"
+                              appearancePreferences.compactMode
+                                ? "translate-x-5"
+                                : "translate-x-0"
                             }`}
                           />
                         </button>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-sm text-gray-700">Yüksek Kontrast</span>
-                          <p className="text-xs text-gray-500">Daha yüksek kontrast için</p>
+                          <span className="text-sm text-gray-700">
+                            Yüksek Kontrast
+                          </span>
+                          <p className="text-xs text-gray-500">
+                            Daha yüksek kontrast için
+                          </p>
                         </div>
                         <button
                           type="button"
                           className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                            appearancePreferences.highContrast ? "bg-indigo-600" : "bg-gray-200"
+                            appearancePreferences.highContrast
+                              ? "bg-indigo-600"
+                              : "bg-gray-200"
                           }`}
                           role="switch"
                           aria-checked={appearancePreferences.highContrast}
-                          onClick={() => handleAppearanceChange("highContrast", !appearancePreferences.highContrast)}
+                          onClick={() =>
+                            handleAppearanceChange(
+                              "highContrast",
+                              !appearancePreferences.highContrast
+                            )
+                          }
                         >
                           <span
                             className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                              appearancePreferences.highContrast ? "translate-x-5" : "translate-x-0"
+                              appearancePreferences.highContrast
+                                ? "translate-x-5"
+                                : "translate-x-0"
                             }`}
                           />
                         </button>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Yazı Boyutu</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yazı Boyutu
+                    </label>
                     <div className="grid grid-cols-4 gap-4">
                       {["small", "medium", "large", "x-large"].map((size) => (
                         <button
                           key={size}
-                          onClick={() => handleAppearanceChange("fontSize", size)}
+                          onClick={() =>
+                            handleAppearanceChange("fontSize", size)
+                          }
                           className={`py-2 px-4 rounded-lg border ${
                             appearancePreferences.fontSize === size
                               ? "border-indigo-500 bg-indigo-50 text-indigo-700"
@@ -563,7 +720,7 @@ function SettingsContent() {
                 </div>
               </div>
             )}
-            
+
             <div className="mt-6">
               <button
                 type="button"
@@ -599,7 +756,10 @@ function SidebarSkeleton() {
     <Card className="border-0 shadow-md overflow-hidden">
       <div className="space-y-1">
         {[...Array(4)].map((_, index) => (
-          <div key={`nav-skeleton-${index}`} className="px-4 py-3 flex items-center justify-between">
+          <div
+            key={`nav-skeleton-${index}`}
+            className="px-4 py-3 flex items-center justify-between"
+          >
             <div className="flex items-center gap-3">
               <Skeleton className="h-5 w-5" />
               <Skeleton className="h-5 w-32" />
@@ -627,79 +787,6 @@ function ProfileFormSkeleton() {
       <div className="space-y-2">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-32 w-full" />
-      </div>
-      <div className="flex justify-end">
-        <Skeleton className="h-10 w-32" />
-      </div>
-    </div>
-  );
-}
-
-function SecurityFormSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-32" />
-      <div className="space-y-4">
-        {[...Array(3)].map((_, index) => (
-          <div key={`security-field-${index}`} className="space-y-2">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-end">
-        <Skeleton className="h-10 w-32" />
-      </div>
-    </div>
-  );
-}
-
-function NotificationsFormSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-40" />
-      <div className="space-y-4">
-        {[...Array(5)].map((_, index) => (
-          <div key={`notification-pref-${index}`} className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-4 w-64" />
-            </div>
-            <Skeleton className="h-6 w-12" />
-          </div>
-        ))}
-      </div>
-      <div className="flex justify-end">
-        <Skeleton className="h-10 w-32" />
-      </div>
-    </div>
-  );
-}
-
-function AppearanceFormSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Skeleton className="h-8 w-36" />
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-24" />
-          <div className="grid grid-cols-3 gap-4">
-            {[...Array(3)].map((_, index) => (
-              <Skeleton key={`theme-${index}`} className="h-20 w-full rounded-lg" />
-            ))}
-          </div>
-        </div>
-        <div className="space-y-4">
-          {[...Array(3)].map((_, index) => (
-            <div key={`appearance-pref-${index}`} className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Skeleton className="h-5 w-40" />
-                <Skeleton className="h-4 w-56" />
-              </div>
-              <Skeleton className="h-6 w-12" />
-            </div>
-          ))}
-        </div>
       </div>
       <div className="flex justify-end">
         <Skeleton className="h-10 w-32" />
@@ -749,4 +836,4 @@ export default function TutorSettingsPage() {
       )}
     </div>
   );
-} 
+}
