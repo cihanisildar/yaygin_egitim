@@ -7,6 +7,15 @@ const nextConfig = {
     serverComponentsExternalPackages: ["mongoose", "mongodb"]
   },
   webpack: (config, { isServer }) => {
+    // Add rule for .node files
+    config.module = config.module || {};
+    config.module.rules = config.module.rules || [];
+    config.module.rules.push({
+      test: /\.node$/,
+      use: 'node-loader',
+      type: 'javascript/auto',
+    });
+
     if (!isServer) {
       // Don't attempt to import these server-side modules on the client
       config.resolve.fallback = {
