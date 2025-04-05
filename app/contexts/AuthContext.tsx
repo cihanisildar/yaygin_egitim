@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import { UserRole } from "@prisma/client";
 import toast from 'react-hot-toast';
+import { getApiUrl } from '@/lib/api-config';
 
 type AuthUser = {
   id: string;
@@ -61,7 +62,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const refreshToken = async () => {
     try {
       console.log('Attempting to refresh token...');
-      const res = await fetch("/api/auth/refresh", {
+      const res = await fetch(getApiUrl("/api/auth/refresh"), {
         method: "POST",
         credentials: 'include',
         headers: {
@@ -169,7 +170,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = async (username: string, password: string) => {
     try {
       setLoading(true);
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

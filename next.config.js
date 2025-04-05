@@ -10,7 +10,8 @@ const nextConfig = {
       'placekitten.com',
       'picsum.photos',
       'images.unsplash.com',
-      'localhost'
+      'localhost',
+      'vercel.app'  // Allow all Vercel subdomains
     ],
   },
 };

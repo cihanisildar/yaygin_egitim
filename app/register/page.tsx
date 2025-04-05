@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserRole } from '@prisma/client';
 import { ArrowRight, UserPlus2 } from 'lucide-react';
+import { getApiUrl } from '@/lib/api-config';
 
 type Tutor = {
   id: string;
@@ -81,7 +82,7 @@ export default function RegisterPage() {
       const username = `${formData.firstName.toLowerCase()}.${formData.lastName.toLowerCase()}`.replace(/\s+/g, '');
       const email = `${username}@example.com`;
 
-      const response = await fetch('/api/register', {
+      const response = await fetch(getApiUrl('/api/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

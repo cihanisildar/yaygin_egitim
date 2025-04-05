@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Calendar, ChevronRight, ShoppingBag, Trophy, User, UserPlus, Users } from "lucide-react";
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getApiUrl } from '@/lib/api-config';
 
 type Stats = {
   totalUsers: number;
@@ -88,7 +89,7 @@ export default function AdminDashboard() {
         
         try {
           // Get pending requests count
-          const requestsRes = await fetch('/api/admin/registration-requests');
+          const requestsRes = await fetch(getApiUrl('/api/admin/registration-requests'));
           const requestsData = await requestsRes.json();
           if (requestsData?.requests) {
             defaultStats.pendingRequests = requestsData.requests.filter((req: RegistrationRequest) => req.status === 'pending').length;
