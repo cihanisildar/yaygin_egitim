@@ -1,5 +1,7 @@
 'use client';
 
+import { getLeaderboard } from '@/app/actions/leaderboard';
+import { getStudents } from '@/app/actions/users';
 import { HeaderSkeleton, LeaderboardEntrySkeleton, StatsCardSkeleton } from '@/app/components/ui/skeleton-shimmer';
 import { useAuth } from '@/app/contexts/AuthContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -48,20 +50,26 @@ export default function AdminLeaderboardPage() {
       try {
         setLoading(true);
         
-        // Fetch all students for the leaderboard
-        const leaderboardResponse = await fetch('/api/leaderboard?limit=1000');
-        if (!leaderboardResponse.ok) {
-          throw new Error('Failed to fetch leaderboard data');
-        }
-        const leaderboardData = await leaderboardResponse.json();
-        setLeaderboard(leaderboardData.leaderboard);
-        setFilteredLeaderboard(leaderboardData.leaderboard);
+        // Fetch all students for the leaderboard using the server action
+        const leaderboardData = await getLeaderboard(undefined, 1000);
+        setLeaderboard(leaderboardData);
+        setFilteredLeaderboard(leaderboardData);
         
-        // Fetch tutors for filtering
-        const tutorsResponse = await fetch('/api/users?role=tutor');
-        if (tutorsResponse.ok) {
-          const tutorsData = await tutorsResponse.json();
-          setTutors(tutorsData.users);
+        // Fetch tutors using the server action
+        const tutorsData = await getStudents({ 
+          page: 1, 
+          limit: 100,
+          search: '',
+          tutorId: undefined 
+        });
+        
+        if (tutorsData) {
+          setTutors(tutorsData.students.map(student => ({
+            id: student.id,
+            username: student.username,
+            firstName: student.firstName,
+            lastName: student.lastName
+          })));
         }
       } catch (error) {
         console.error('Error fetching data:', error);

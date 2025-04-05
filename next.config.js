@@ -4,7 +4,8 @@ const webpack = require('webpack');
 const nextConfig = {
   /* config options here */
   experimental: {
-    serverComponentsExternalPackages: ["mongoose", "mongodb"]
+    serverComponentsExternalPackages: ["mongoose", "mongodb"],
+    serverActions: true
   },
   webpack: (config, { isServer }) => {
     // Add rule for .node files
