@@ -30,6 +30,11 @@ const nextConfig = {
         stream: require.resolve('stream-browserify'),
         crypto: require.resolve('crypto-browserify'),
         buffer: require.resolve('buffer/'),
+        zlib: false,
+        snappy: false,
+        kerberos: false,
+        'mongodb-client-encryption': false,
+        aws4: false,
       };
 
       // Add polyfill plugins
