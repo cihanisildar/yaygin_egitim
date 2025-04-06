@@ -41,48 +41,69 @@ export async function GET(request: NextRequest) {
 
     // For tutors, only show their students
     if (isTutor(currentUser)) {
-      where.tutorId = currentUser.id;
+      if (role === UserRole.STUDENT) {
+        where.tutorId = currentUser.id;
+      } else {
+        // If not specifically looking for students, return empty result
+        return NextResponse.json({
+          users: [],
+          pagination: {
+            total: 0,
+            page,
+            limit,
+            pages: 0
+          }
+        });
+      }
     }
 
-    // Get users with pagination
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          role: true,
-          firstName: true,
-          lastName: true,
-          points: true,
-          createdAt: true,
-          updatedAt: true,
-          tutor: {
-            select: {
-              id: true,
-              username: true,
-              firstName: true,
-              lastName: true
+    try {
+      // Get users with pagination
+      const [users, total] = await Promise.all([
+        prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            username: true,
+            email: true,
+            role: true,
+            firstName: true,
+            lastName: true,
+            points: true,
+            createdAt: true,
+            updatedAt: true,
+            tutor: {
+              select: {
+                id: true,
+                username: true,
+                firstName: true,
+                lastName: true
+              }
             }
-          }
-        },
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.user.count({ where })
-    ]);
+          },
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' }
+        }),
+        prisma.user.count({ where })
+      ]);
 
-    return NextResponse.json({
-      users,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    });
+      return NextResponse.json({
+        users,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit)
+        }
+      });
+    } catch (error) {
+      console.error('Database query error:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch users' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Get users error:', error);
     return NextResponse.json(

@@ -51,9 +51,15 @@ export interface Event {
   id: string;
   title: string;
   description: string;
-  date: Date | string;
+  date?: Date | string;
+  startDate?: string;
+  endDate?: string;
   location?: string;
   status: string;
+  type: 'online' | 'in-person' | 'hybrid';
+  capacity: number;
+  points: number;
+  tags: string[];
   createdBy: {
     id: string;
     username: string;

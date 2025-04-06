@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from '@/lib/server-auth';
+import { getServerSession, getUserFromRequest, isAuthenticated, isStudent, isTutor } from '@/lib/server-auth';
+import { Prisma } from '@prisma/client';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const currentUser = await getUserFromRequest(request);
     
-    if (!session || !session.user.id) {
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Build where clause based on user role
+    const where: Prisma.EventWhereInput = {};
+
+    if (isStudent(currentUser)) {
+      // Students can only see events created by their tutor
+      if (!currentUser.tutorId) {
+        return NextResponse.json({
+          success: true,
+          data: { events: [] }
+        });
+      }
+      where.createdById = currentUser.tutorId;
+    } else if (isTutor(currentUser)) {
+      // Tutors can only see their own events
+      where.createdById = currentUser.id;
+    }
+    // Admins can see all events (no filter)
+
     const events = await prisma.event.findMany({
+      where,
       orderBy: { startDate: 'desc' },
       select: {
         id: true,

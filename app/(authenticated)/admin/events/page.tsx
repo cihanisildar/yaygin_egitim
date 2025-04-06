@@ -9,13 +9,25 @@ import { useToast } from '@/components/ui/use-toast';
 interface EventFormData {
   title: string;
   description: string;
-  date: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  location: string;
+  type: 'online' | 'in-person' | 'hybrid';
+  capacity: number;
+  points: number;
+  tags: string[];
 }
 
 interface EventFormErrors {
   title?: string;
   description?: string;
-  date?: string;
+  startDate?: string;
+  startTime?: string;
+  endDate?: string;
+  endTime?: string;
+  location?: string;
 }
 
 export default function AdminEventsPage() {
@@ -31,7 +43,15 @@ export default function AdminEventsPage() {
   const [eventForm, setEventForm] = useState<EventFormData>({
     title: '',
     description: '',
-    date: ''
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: '',
+    location: '',
+    type: 'in-person',
+    capacity: 20,
+    points: 0,
+    tags: []
   });
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<EventFormErrors>({});
@@ -59,13 +79,20 @@ export default function AdminEventsPage() {
       }
 
       const data: ApiResponse<{ events: Event[] }> = await response.json();
+      console.log('Received events data:', data); // Debug log
       
       if (!data.success || !data.data) {
         throw new Error('Invalid response format');
       }
       
-      setEvents(data.data.events);
-      setFilteredEvents(data.data.events);
+      // Transform dates before setting state
+      const eventsWithFixedDates = data.data.events.map(event => ({
+        ...event,
+        date: event.startDate || event.date // Try to use startDate if available, fallback to date
+      }));
+      
+      setEvents(eventsWithFixedDates);
+      setFilteredEvents(eventsWithFixedDates);
     } catch (error) {
       const err = error as Error;
       setError(err.message);
@@ -101,7 +128,7 @@ export default function AdminEventsPage() {
       const filterDate = new Date(dateFilter);
       
       filtered = filtered.filter(event => {
-        const eventDate = new Date(event.date);
+        const eventDate = new Date(event.startDate || event.date || '');
         return eventDate.toISOString().split('T')[0] === filterDate.toISOString().split('T')[0];
       });
     }
@@ -158,21 +185,58 @@ export default function AdminEventsPage() {
     setEventForm({
       title: '',
       description: '',
-      date: new Date().toISOString().split('T')[0]
+      startDate: '',
+      startTime: '',
+      endDate: '',
+      endTime: '',
+      location: '',
+      type: 'in-person',
+      capacity: 20,
+      points: 0,
+      tags: []
     });
     setFormErrors({});
     setIsModalOpen(true);
   };
 
   const openEditEventModal = (event: Event) => {
-    setCurrentEventId(event.id);
-    setEventForm({
-      title: event.title,
-      description: event.description,
-      date: new Date(event.date).toISOString().split('T')[0]
-    });
-    setFormErrors({});
-    setIsModalOpen(true);
+    if (!event?.id || !event?.date) {
+      toast({
+        title: 'Error',
+        description: 'Invalid event data',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const eventDate = new Date(event.date);
+      if (isNaN(eventDate.getTime())) throw new Error('Invalid date');
+
+      setCurrentEventId(event.id);
+      setEventForm({
+        title: event.title || '',
+        description: event.description || '',
+        startDate: eventDate.toISOString().slice(0, 10),
+        startTime: eventDate.toTimeString().slice(0, 5),
+        endDate: eventDate.toISOString().slice(0, 10),
+        endTime: eventDate.toTimeString().slice(0, 5),
+        location: event.location || 'Online',
+        type: event.type || 'in-person',
+        capacity: event.capacity || 20,
+        points: event.points || 0,
+        tags: event.tags || []
+      });
+      setFormErrors({});
+      setIsModalOpen(true);
+    } catch (error) {
+      console.error('Error parsing date:', error);
+      toast({
+        title: 'Error',
+        description: 'Invalid date format in event data',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -195,7 +259,11 @@ export default function AdminEventsPage() {
     const errors = {
       title: '',
       description: '',
-      date: ''
+      startDate: '',
+      startTime: '',
+      endDate: '',
+      endTime: '',
+      location: ''
     };
     let isValid = true;
     
@@ -209,8 +277,28 @@ export default function AdminEventsPage() {
       isValid = false;
     }
     
-    if (!eventForm.date) {
-      errors.date = 'Tarih gereklidir';
+    if (!eventForm.startDate) {
+      errors.startDate = 'Başlangıç tarihi gereklidir';
+      isValid = false;
+    }
+    
+    if (!eventForm.startTime) {
+      errors.startTime = 'Başlangıç saati gereklidir';
+      isValid = false;
+    }
+    
+    if (!eventForm.endDate) {
+      errors.endDate = 'Bitiş tarihi gereklidir';
+      isValid = false;
+    }
+    
+    if (!eventForm.endTime) {
+      errors.endTime = 'Bitiş saati gereklidir';
+      isValid = false;
+    }
+    
+    if (!eventForm.location.trim()) {
+      errors.location = 'Konum gereklidir';
       isValid = false;
     }
     
@@ -228,6 +316,27 @@ export default function AdminEventsPage() {
     try {
       setFormSubmitting(true);
       
+      // Create consolidated datetime strings
+      const startDateTime = eventForm.startDate ? 
+        new Date(`${eventForm.startDate}T${eventForm.startTime || '00:00'}`).toISOString() : 
+        new Date().toISOString();
+      
+      const endDateTime = eventForm.endDate ? 
+        new Date(`${eventForm.endDate}T${eventForm.endTime || '23:59'}`).toISOString() : 
+        new Date(new Date(startDateTime).setHours(23, 59, 59, 999)).toISOString();
+      
+      const eventData = {
+        title: eventForm.title.trim(),
+        description: eventForm.description.trim(),
+        startDate: startDateTime,
+        endDate: endDateTime,
+        location: eventForm.location?.trim() || 'Online',
+        type: eventForm.type,
+        capacity: eventForm.capacity,
+        points: eventForm.points,
+        tags: eventForm.tags
+      };
+      
       const method = currentEventId ? 'PUT' : 'POST';
       const url = currentEventId ? `/api/events/${currentEventId}` : '/api/events';
       
@@ -236,7 +345,7 @@ export default function AdminEventsPage() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(eventForm)
+        body: JSON.stringify(eventData)
       });
       
       if (!response.ok) {
@@ -246,22 +355,19 @@ export default function AdminEventsPage() {
       
       const data = await response.json();
       
-      if (currentEventId) {
-        // Update existing event in the state
-        setEvents(events.map(event => 
-          event.id === currentEventId ? { ...data.event, createdBy: event.createdBy } : event
-        ));
-      } else {
-        // Add new event to the state
-        setEvents([...events, data.event]);
-      }
-      
+      // Close the modal first
       setIsModalOpen(false);
+      
+      // Show success message
       toast({
         title: 'Success',
         description: currentEventId ? 'Etkinlik güncellendi' : 'Etkinlik oluşturuldu',
         variant: 'default',
       });
+
+      // Fetch fresh data
+      await fetchEvents();
+      
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : 'Etkinlik kaydedilirken bir hata oluştu';
       console.error('Save event error:', err);
@@ -276,12 +382,17 @@ export default function AdminEventsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('tr-TR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('tr-TR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch {
+      return 'Invalid Date';
+    }
   };
 
   if (loading) {
@@ -421,7 +532,7 @@ export default function AdminEventsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredEvents.map(event => (
+                {filteredEvents.filter(Boolean).map(event => event && (
                   <tr key={event.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center">
@@ -431,14 +542,54 @@ export default function AdminEventsPage() {
                           </svg>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                          <div className="text-sm text-gray-500 line-clamp-1 max-w-xs">{event.description}</div>
+                          <div className="text-sm font-medium text-gray-900">{event?.title || 'Untitled Event'}</div>
+                          <div className="text-sm text-gray-500 line-clamp-1 max-w-xs">{event?.description || 'No description'}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatDate(new Date(event.date).toISOString())}</div>
-                      <div className="text-xs text-gray-500">{new Date(event.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {(() => {
+                          try {
+                            // Try both startDate and date fields
+                            const dateStr = event.startDate || event.date;
+                            if (!dateStr) return 'No Date';
+                            
+                            const date = new Date(dateStr);
+                            if (isNaN(date.getTime())) {
+                              console.log('Invalid date value:', dateStr); // Debug log
+                              return 'Invalid Date';
+                            }
+                            
+                            return date.toLocaleDateString('tr-TR', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            });
+                          } catch (error) {
+                            console.error('Error formatting date:', error); // Debug log
+                            return 'Invalid Date';
+                          }
+                        })()}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {(() => {
+                          try {
+                            const dateStr = event.startDate || event.date;
+                            if (!dateStr) return '--:--';
+                            
+                            const date = new Date(dateStr);
+                            if (isNaN(date.getTime())) return '--:--';
+                            
+                            return date.toLocaleTimeString('tr-TR', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            });
+                          } catch {
+                            return '--:--';
+                          }
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-5 whitespace-nowrap">
                       <div className="flex items-center">
@@ -500,10 +651,10 @@ export default function AdminEventsPage() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmitEvent} className="space-y-5">
+            <form onSubmit={handleSubmitEvent} className="space-y-6">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Başlık
+                  Başlık *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -519,6 +670,7 @@ export default function AdminEventsPage() {
                     value={eventForm.title}
                     onChange={handleFormChange}
                     placeholder="Etkinlik başlığı girin"
+                    required
                   />
                 </div>
                 {formErrors.title && (
@@ -533,7 +685,7 @@ export default function AdminEventsPage() {
               
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Açıklama
+                  Açıklama *
                 </label>
                 <div className="relative">
                   <div className="absolute top-3 left-3 pointer-events-none">
@@ -549,6 +701,7 @@ export default function AdminEventsPage() {
                     value={eventForm.description}
                     onChange={handleFormChange}
                     placeholder="Etkinlik detaylarını girin"
+                    required
                   ></textarea>
                 </div>
                 {formErrors.description && (
@@ -561,36 +714,161 @@ export default function AdminEventsPage() {
                 )}
               </div>
               
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Başlangıç Tarihi *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="date"
+                      id="startDate"
+                      name="startDate"
+                      className={`block w-full pl-10 pr-3 py-3 border ${formErrors.startDate ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
+                      value={eventForm.startDate}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  {formErrors.startDate && (
+                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {formErrors.startDate}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
+                    Başlangıç Saati *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="time"
+                      id="startTime"
+                      name="startTime"
+                      className={`block w-full pl-10 pr-3 py-3 border ${formErrors.startTime ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
+                      value={eventForm.startTime}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  {formErrors.startTime && (
+                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {formErrors.startTime}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Bitiş Tarihi *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="date"
+                      id="endDate"
+                      name="endDate"
+                      className={`block w-full pl-10 pr-3 py-3 border ${formErrors.endDate ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
+                      value={eventForm.endDate}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  {formErrors.endDate && (
+                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {formErrors.endDate}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">
+                    Bitiş Saati *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <input
+                      type="time"
+                      id="endTime"
+                      name="endTime"
+                      className={`block w-full pl-10 pr-3 py-3 border ${formErrors.endTime ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
+                      value={eventForm.endTime}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                  {formErrors.endTime && (
+                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      {formErrors.endTime}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <div>
-                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
-                  Tarih
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+                  Konum *
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                   </div>
                   <input
-                    type="date"
-                    id="date"
-                    name="date"
-                    className={`block w-full pl-10 pr-3 py-3 border ${formErrors.date ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
-                    value={eventForm.date}
+                    type="text"
+                    id="location"
+                    name="location"
+                    className={`block w-full pl-10 pr-3 py-3 border ${formErrors.location ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-purple-500 focus:border-purple-500'} rounded-lg shadow-sm transition-colors text-sm`}
+                    value={eventForm.location}
                     onChange={handleFormChange}
+                    placeholder="Etkinliğin yapılacağı yer"
+                    required
                   />
                 </div>
-                {formErrors.date && (
+                {formErrors.location && (
                   <p className="mt-1.5 text-sm text-red-600 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    {formErrors.date}
+                    {formErrors.location}
                   </p>
                 )}
               </div>
-              
-              <div className="flex justify-end space-x-3 mt-8">
+
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

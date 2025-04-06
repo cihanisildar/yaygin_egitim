@@ -81,40 +81,40 @@ export default function CreateEventPage() {
       // Log the form data before processing
       console.log('Form data before processing:', formData);
       
-      // If no dates are provided, use current date/time
-      const now = new Date();
-      const currentDate = now.toISOString().split('T')[0];
-      const currentTime = now.toTimeString().split(' ')[0].slice(0, 5);
-
       // Create consolidated datetime strings in TR timezone
-      const startDateTime = formData.startDate && formData.startTime ? 
-        new Date(`${formData.startDate}T${formData.startTime}`).toISOString() : 
-        new Date(`${currentDate}T${currentTime}`).toISOString();
+      const startDateTime = formData.startDate ? 
+        new Date(`${formData.startDate}T${formData.startTime || '00:00'}`).toISOString() : 
+        new Date().toISOString();
       
-      const endDateTime = formData.endDate && formData.endTime ? 
-        new Date(`${formData.endDate}T${formData.endTime}`).toISOString() : 
-        // If no end date/time, set it to 1 hour after start
-        new Date(new Date(startDateTime).getTime() + 60 * 60 * 1000).toISOString();
+      const endDateTime = formData.endDate ? 
+        new Date(`${formData.endDate}T${formData.endTime || '23:59'}`).toISOString() : 
+        // If no end date/time, set it to end of the start date
+        new Date(new Date(startDateTime).setHours(23, 59, 59, 999)).toISOString();
       
       // Log the processed datetime values
       console.log('Processed datetime values:', { startDateTime, endDateTime });
       
       const eventData = {
-        title: formData.title,
-        description: formData.description,
-        startDateTime,
-        endDateTime,
-        location: formData.location || 'Online',
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        startDate: startDateTime,
+        endDate: endDateTime,
+        location: formData.location?.trim() || 'Online',
         type: formData.type,
-        capacity: formData.capacity,
-        points: formData.points,
+        capacity: parseInt(formData.capacity.toString()) || 20,
+        points: parseInt(formData.points.toString()) || 0,
         tags: formData.tags
       };
+
+      // Validate required fields
+      if (!eventData.title || !eventData.description || !eventData.startDate || !eventData.endDate) {
+        throw new Error('Title, description, start date and end date are required');
+      }
 
       // Log the final event data being sent
       console.log('Event data being sent to API:', eventData);
 
-      const response = await fetch('/api/tutor/events', {  // Updated API endpoint
+      const response = await fetch('/api/events', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -214,7 +214,7 @@ export default function CreateEventPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlangıç Tarihi
+                    Başlangıç Tarihi *
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -224,6 +224,7 @@ export default function CreateEventPage() {
                       type="date"
                       value={formData.startDate}
                       onChange={handleInputChange}
+                      required
                       className="pl-10"
                     />
                   </div>
@@ -231,7 +232,7 @@ export default function CreateEventPage() {
                 
                 <div>
                   <label htmlFor="startTime" className="block text-sm font-medium text-gray-700 mb-1">
-                    Başlangıç Saati
+                    Başlangıç Saati *
                   </label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -241,6 +242,7 @@ export default function CreateEventPage() {
                       type="time"
                       value={formData.startTime}
                       onChange={handleInputChange}
+                      required
                       className="pl-10"
                     />
                   </div>
@@ -248,7 +250,7 @@ export default function CreateEventPage() {
                 
                 <div>
                   <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-                    Bitiş Tarihi
+                    Bitiş Tarihi *
                   </label>
                   <div className="relative">
                     <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -258,6 +260,7 @@ export default function CreateEventPage() {
                       type="date"
                       value={formData.endDate}
                       onChange={handleInputChange}
+                      required
                       className="pl-10"
                     />
                   </div>
@@ -265,7 +268,7 @@ export default function CreateEventPage() {
                 
                 <div>
                   <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-1">
-                    Bitiş Saati
+                    Bitiş Saati *
                   </label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -275,6 +278,7 @@ export default function CreateEventPage() {
                       type="time"
                       value={formData.endTime}
                       onChange={handleInputChange}
+                      required
                       className="pl-10"
                     />
                   </div>

@@ -158,23 +158,29 @@ function EventsList() {
         throw new Error("Failed to fetch events");
       }
 
-      const data = (await response.json()) as EventApiResponse;
-      const formattedEvents = data.events.map((event) => ({
+      const data = await response.json();
+      
+      // Check if data.events exists
+      if (!data || !data.events) {
+        throw new Error("Invalid response format");
+      }
+
+      const formattedEvents = data.events.map((event: any) => ({
         id: event._id || event.id || "",
-        title: event.title,
-        description: event.description,
+        title: event.title || "",
+        description: event.description || "",
         startDate: event.startDateTime || event.startDate || "",
         endDate: event.endDateTime || event.endDate || "",
-        location: event.location,
-        type: event.type,
-        status: event.status,
-        capacity: event.capacity,
+        location: event.location || "",
+        type: event.type || "online",
+        status: event.status || "upcoming",
+        capacity: event.capacity || 0,
         enrolledStudents: event.enrolledStudents || 0,
-        points: event.points,
+        points: event.points || 0,
         tags: event.tags || [],
         createdBy: {
-          id: event.createdBy._id || event.createdBy.id || "",
-          name: event.createdBy.username || "You",
+          id: event.createdBy?._id || event.createdBy?.id || "",
+          name: event.createdBy?.username || "You",
         },
       }));
 

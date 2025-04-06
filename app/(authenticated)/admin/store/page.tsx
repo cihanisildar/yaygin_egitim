@@ -128,10 +128,10 @@ export default function AdminStore() {
       const data = await res.json();
       
       // Add new item to the list
-      setItems([...items, data.item]);
+      setItems([...items, data]);
       
       // Show success message
-      setSuccessMessage(`${data.item.name} mağazaya eklendi!`);
+      setSuccessMessage(`${data.name} mağazaya eklendi!`);
       
       // Clear form and close modal
       closeModal();

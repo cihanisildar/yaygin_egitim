@@ -31,7 +31,9 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         <div className="text-2xl font-bold mb-4">Yaygın Eğitim Sistemi</div>
-        <div className="loader"></div>
+        <div className="w-full flex items-center justify-center">
+          <div className="loader"></div>
+        </div>
       </div>
     </div>
   );
