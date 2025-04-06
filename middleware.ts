@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
+import { corsHeaders, handleCors } from './lib/cors-config';
 
 interface JWTPayload {
   id: string;
@@ -20,9 +21,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * - api/auth (auth endpoints)
      */
-    '/((?!_next/static|_next/image|favicon.ico|api/auth).*)'
+    '/((?!_next/static|_next/image|favicon.ico).*)'
   ],
 };
 
@@ -37,18 +37,24 @@ async function verifyAuth(token: string) {
 }
 
 export async function middleware(request: NextRequest) {
+  // Handle CORS preflight requests first
+  const corsResponse = handleCors(request);
+  if (corsResponse) return corsResponse;
+
   const pathname = request.nextUrl.pathname;
 
-  // Skip middleware for public assets and auth API routes
-  if (pathname.startsWith('/_next/') || 
-      pathname.startsWith('/api/auth/') ||
-      pathname === '/favicon.ico') {
+  // Skip middleware for public assets
+  if (pathname.startsWith('/_next/') || pathname === '/favicon.ico') {
     return NextResponse.next();
   }
 
   // Allow public paths
-  if (pathname === '/' || pathname === '/login' || pathname === '/register') {
-    return NextResponse.next();
+  if (pathname === '/' || 
+      pathname === '/login' || 
+      pathname === '/register' || 
+      pathname.startsWith('/api/auth/')) {
+    const response = NextResponse.next();
+    return corsHeaders(request, response);
   }
 
   try {
@@ -62,7 +68,7 @@ export async function middleware(request: NextRequest) {
 
     const response = NextResponse.next();
     response.headers.set('x-user-role', payload.role as string);
-    return response;
+    return corsHeaders(request, response);
   } catch {
     const redirectUrl = new URL('/login', request.url);
     return NextResponse.redirect(redirectUrl);
