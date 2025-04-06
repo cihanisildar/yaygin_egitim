@@ -128,8 +128,17 @@ export default function AdminEventsPage() {
       const filterDate = new Date(dateFilter);
       
       filtered = filtered.filter(event => {
-        const eventDate = new Date(event.startDate || event.date || '');
-        return eventDate.toISOString().split('T')[0] === filterDate.toISOString().split('T')[0];
+        try {
+          const eventDate = new Date(event.startDate || event.date || '');
+          // Check if the date is valid before converting to ISO string
+          if (isNaN(eventDate.getTime())) {
+            return false;
+          }
+          return eventDate.toISOString().split('T')[0] === filterDate.toISOString().split('T')[0];
+        } catch (error) {
+          console.error('Error processing date:', error);
+          return false;
+        }
       });
     }
     
