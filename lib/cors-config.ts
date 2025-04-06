@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const ALLOWED_ORIGIN = 'https://yayginegitimv7.vercel.app';
+const ALLOWED_ORIGINS = [
+  'https://yayginegitimv7.vercel.app',
+  'https://yayginegitimv8.vercel.app'
+];
 
 export function corsHeaders(request: NextRequest, response: NextResponse) {
   // Get origin from request headers
   const origin = request.headers.get('origin') || '';
   
-  // Only allow requests from our allowed origin
-  if (origin === ALLOWED_ORIGIN) {
+  // Only allow requests from our allowed origins
+  if (ALLOWED_ORIGINS.includes(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
   }
   
